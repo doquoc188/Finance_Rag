@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # Qdrant Vector DB Service
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: finrag_qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # FastAPI Backend API
+  backend:
+    build: .
+    container_name: finrag_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - QDRANT_LOCATION=http://qdrant:6333
+      - LLM_PROVIDER=openai
+    depends_on:
+      - qdrant
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  # Streamlit Frontend UI
+  frontend:
+    build: .
+    container_name: finrag_frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://backend:8000/api/v1
+    depends_on:
+      - backend
+    command: streamlit run ui/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
+
+volumes:
+  qdrant_data:

@@ -1,0 +1,38 @@
+# Core AI & RAG Engine
+langchain>=0.2.0
+langchain-community>=0.2.0
+langchain-core>=0.2.0
+langgraph>=0.1.0
+langchain-openai>=0.1.0
+langchain-groq>=0.1.0
+langsmith>=0.1.0
+
+# Vector Store & Search
+qdrant-client>=1.9.0
+rank-bm25>=0.2.2
+sentence-transformers>=3.0.0
+flashrank>=0.2.0
+
+# Document & PDF Parsing
+pypdf>=4.2.0
+pdfplumber>=0.11.0
+tiktoken>=0.7.0
+
+# Web Search Fallback
+tavily-python>=0.3.0
+duckduckgo-search>=6.0.0
+
+# API Backend & Web Server
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+python-multipart>=0.0.9
+httpx>=0.27.0
+
+# Frontend UI
+streamlit>=1.35.0
+
+# Testing & Utilities
+pytest>=8.2.0
+python-dotenv>=1.0.1
