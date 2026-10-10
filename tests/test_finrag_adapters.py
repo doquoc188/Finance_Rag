@@ -1,4 +1,4 @@
-"""Offline OpenAI/Groq factory checks with explicit integration replacements."""
+"""Offline cloud factory checks with explicit integration replacements."""
 
 import builtins
 import sys
@@ -24,6 +24,8 @@ from finrag.providers import (
     ProviderInitializationError,
     ProviderNotRegisteredError,
 )
+from finrag.providers.anthropic import create_anthropic_chat_model
+from finrag.providers.google import create_google_chat_model
 from finrag.providers.groq import create_groq_chat_model
 from finrag.providers.openai import create_openai_chat_model
 
@@ -35,6 +37,7 @@ class AdapterCase:
     integration: str
     constructor: str
     key_variable: str
+    model_keyword: str = "model"
 
 
 @pytest.fixture(
@@ -43,12 +46,33 @@ class AdapterCase:
             "openai", create_openai_chat_model, "langchain_openai", "ChatOpenAI", "OPENAI_API_KEY"
         ),
         AdapterCase("groq", create_groq_chat_model, "langchain_groq", "ChatGroq", "GROQ_API_KEY"),
+        AdapterCase(
+            "anthropic",
+            create_anthropic_chat_model,
+            "langchain_anthropic",
+            "ChatAnthropic",
+            "ANTHROPIC_API_KEY",
+            "model_name",
+        ),
+        AdapterCase(
+            "google",
+            create_google_chat_model,
+            "langchain_google_genai",
+            "ChatGoogleGenerativeAI",
+            "GOOGLE_API_KEY",
+        ),
     ),
-    ids=("openai", "groq"),
+    ids=("openai", "groq", "anthropic", "google"),
 )
 def adapter(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> AdapterCase:
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    for name in (
+        "OPENAI_API_KEY",
+        "GROQ_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_API_KEY",
+        "GEMINI_API_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
     return cast(AdapterCase, request.param)
 
 
@@ -67,11 +91,11 @@ def test_factory_forwards_settings_and_preserves_registry_and_langchain_contract
 ) -> None:
     key = "test-only-credential"
     monkeypatch.setenv(adapter.key_variable, key)
-    calls: list[tuple[str, float, SecretStr]] = []
+    calls: list[dict[str, object]] = []
     expected = FakeListChatModel(responses=["Offline adapter response"])
 
-    def constructor(*, model: str, temperature: float, api_key: SecretStr) -> BaseChatModel:
-        calls.append((model, temperature, api_key))
+    def constructor(**kwargs: object) -> BaseChatModel:
+        calls.append(kwargs)
         return expected
 
     install_constructor(monkeypatch, adapter, constructor)
@@ -80,10 +104,21 @@ def test_factory_forwards_settings_and_preserves_registry_and_langchain_contract
     registry.register(adapter.name, adapter.factory)
     factory = registry.get(settings.provider)
     assert calls == []
+    if adapter.name == "google":
+        monkeypatch.setenv("GOOGLE_GENAI_USE_VERTEXAI", "true")
     model = factory(settings)
     assert model is expected
-    assert calls == [("explicit-model", 0.25, SecretStr(key))]
-    assert calls[0][2].get_secret_value() == key
+    expected_arguments: dict[str, object] = {
+        adapter.model_keyword: "explicit-model",
+        "temperature": 0.25,
+        "api_key": SecretStr(key),
+    }
+    if adapter.name == "google":
+        expected_arguments["vertexai"] = False
+    assert calls == [expected_arguments]
+    credential = calls[0]["api_key"]
+    assert isinstance(credential, SecretStr)
+    assert credential.get_secret_value() == key
     assert key not in repr(calls)
 
     response = (ChatPromptTemplate.from_messages([("human", "{question}")]) | model).invoke(
@@ -108,6 +143,8 @@ def test_missing_or_blank_key_fails_before_import_and_does_not_load_dotenv(
     # A key for another provider must not supply this provider's credential.
     other_key = "GROQ_API_KEY" if adapter.name == "openai" else "OPENAI_API_KEY"
     monkeypatch.setenv(other_key, "other-provider-test-key")
+    if adapter.name == "google":
+        monkeypatch.setenv("GEMINI_API_KEY", "ignored-alias-test-key")
     monkeypatch.setitem(sys.modules, adapter.integration, None)
     with pytest.raises(ProviderConfigurationError, match=adapter.key_variable) as caught:
         adapter.factory(ChatModelSettings(provider=adapter.name))
@@ -126,8 +163,8 @@ def test_missing_integration_is_actionable_and_chained(
     assert isinstance(caught.value.__cause__, ModuleNotFoundError)
     assert adapter.integration.replace("_", "-") in str(caught.value)
     assert "uv sync" in str(caught.value)
-    if adapter.name == "groq":
-        assert "--extra groq" in str(caught.value)
+    if adapter.name != "openai":
+        assert f"--extra {adapter.name}" in str(caught.value)
     assert "test-only-credential" not in repr(caught.value)
 
 
@@ -172,7 +209,7 @@ def test_constructor_failure_preserves_cause_without_public_secret_leakage(
     monkeypatch.setenv(adapter.key_variable, key)
     failure = ValueError(f"SDK rejected credential {key}")
 
-    def constructor(*, model: str, temperature: float, api_key: SecretStr) -> BaseChatModel:
+    def constructor(**kwargs: object) -> BaseChatModel:
         raise failure
 
     install_constructor(monkeypatch, adapter, constructor)

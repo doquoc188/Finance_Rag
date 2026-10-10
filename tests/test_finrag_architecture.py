@@ -39,7 +39,13 @@ def test_package_import_boundaries(
         package = ".".join((package_name, *relative_parent.parts))
         tree = ast.parse(path.read_text(encoding="utf-8"))
         adapter_name = path.stem if package_name == "finrag.providers" else ""
-        integration = {"openai": "langchain_openai", "groq": "langchain_groq"}.get(adapter_name)
+        integration = {
+            "openai": "langchain_openai",
+            "groq": "langchain_groq",
+            "anthropic": "langchain_anthropic",
+            "google": "langchain_google_genai",
+            "ollama": "langchain_ollama",
+        }.get(adapter_name)
         permitted = allowed_packages + (("pydantic", integration) if integration else ())
         factory_nodes = {
             child
@@ -80,7 +86,11 @@ import sys
 attempts = []
 class BlockIntegrations(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split('.')[0] in {'langchain_openai', 'langchain_groq', 'openai', 'groq'}:
+        if fullname.split('.')[0] in {
+            'langchain_openai', 'langchain_groq', 'langchain_anthropic',
+            'langchain_google_genai', 'langchain_ollama', 'openai', 'groq',
+            'anthropic', 'google', 'ollama',
+        }:
             attempts.append(fullname)
             raise AssertionError('Provider SDK imported before factory call')
 
@@ -95,11 +105,12 @@ socket.create_connection = block_network
 modules = [importlib.import_module(name) for name in (
     'finrag', 'finrag.providers', 'finrag.providers.registry',
     'finrag.providers.openai', 'finrag.providers.groq',
+    'finrag.providers.anthropic', 'finrag.providers.google', 'finrag.providers.ollama',
 )]
 from finrag.providers import ChatProviderRegistry, ProviderNotRegisteredError
 for module in modules:
     assert not any(isinstance(value, ChatProviderRegistry) for value in vars(module).values())
-for name in ('openai', 'groq'):
+for name in ('openai', 'groq', 'anthropic', 'google', 'ollama'):
     try:
         ChatProviderRegistry().get(name)
     except ProviderNotRegisteredError:
@@ -112,7 +123,17 @@ print('provider imports are isolated')
     environment = {
         key: value
         for key, value in os.environ.items()
-        if key.upper() not in {"OPENAI_API_KEY", "GROQ_API_KEY"}
+        if key.upper()
+        not in {
+            "OPENAI_API_KEY",
+            "GROQ_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "GOOGLE_API_KEY",
+            "GEMINI_API_KEY",
+            "OLLAMA_API_KEY",
+            "OLLAMA_BASE_URL",
+            "OLLAMA_HOST",
+        }
     }
     result = subprocess.run(
         [sys.executable, "-I", "-c", script],

@@ -36,6 +36,23 @@ return the integration's `BaseChatModel` unchanged, preserving Runnable and stan
 structured-output interfaces. The legacy runtime remains unmigrated. See the
 [adapter report](phase-1.1c-baseline.md) for verified versions, arguments, and results.
 
+Phase 1.1D completes the five explicit factories: OpenAI, Anthropic, and Google Gemini
+for cloud APIs; Groq for its inference service; Ollama for a local server. Canonical
+registry names are `openai`, `anthropic`, `google`, `groq`, and `ollama`. Import the
+factories from their matching `finrag.providers.<name>` modules and register them on
+your own registry. Only OpenAI remains in the default dependency path. Install other
+integrations with `uv sync --extra groq`, `--extra anthropic`, `--extra google`, or
+`--extra ollama`; flags can be combined.
+
+Anthropic reads `ANTHROPIC_API_KEY`; Google reads `GOOGLE_API_KEY` and explicitly uses
+the Gemini Developer API backend. Ollama requires no key and reads `OLLAMA_BASE_URL`,
+defaulting to `http://127.0.0.1:11434` when unset. A blank explicit URL is rejected.
+Construction does not check provider/server availability, list or pull models, or
+invoke them; successful construction does not prove an Ollama server is available.
+Remote availability is only established when the caller uses the model. No runtime
+migration or model-role resolver is included. See the
+[five-provider report](phase-1.1d-baseline.md) for exact interfaces and verification.
+
 ## Python and installation
 
 Use Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
@@ -65,8 +82,13 @@ and services; the offline restrictions below apply to tests only.
 - Runtime requirements retain the existing lower bounds. OpenAI stays in the default
   set because `LLM_PROVIDER` defaults to `openai`, and embeddings also consult its key.
 - Groq is lazy-imported and optional: use `uv sync --extra groq` when selecting it.
-  Plain `uv sync` omits Groq. Ollama currently uses the existing community adapter and
-  needs no new SDK. The standalone demo uses the standard library for its providers.
+  Plain `uv sync` omits all optional chat integrations. The new Ollama factory uses
+  the optional `langchain-ollama` extra; the legacy app still uses its existing community
+  adapter. The standalone demo uses the standard library for its providers.
+- Anthropic/Google/Ollama extras have lower bounds matching the inspected constructor
+  interfaces; `uv.lock` fixes exact versions. Google GenAI requires Tenacity below 9.2,
+  so this phase changes the shared lock from 9.2.1 to 9.1.4; other existing versions
+  are unchanged. The full offline suite verifies compatibility, not live model behavior.
 - Future provider SDKs belong in `project.optional-dependencies`. A future GraphRAG
   extra must be separate; no placeholder SDK or graph dependency is installed now.
 - `requests` and `typing-extensions` become explicit dependencies because existing
@@ -87,8 +109,10 @@ Ruff checks correctness, unused names, and import order, with a 100-column forma
 Mypy understands the existing namespace-package layout and checks untyped bodies as
 well as annotations. Compact diagnostics avoid a Windows encoding crash when pretty
 output includes Vietnamese source lines. There are no blanket application exclusions
-or error suppressions. A targeted missing-import exception covers only the optional
-`langchain_groq` SDK; it does not suppress errors in `app.core.llm`.
+or error suppressions. Missing-import exceptions cover only optional integration
+namespaces; installed-SDK checks verify their real types separately. Anthropic 1.7.5
+has one documented constructor typing exception for falsely required timeout/stop
+arguments; see the phase report. Errors in `app.core.llm` remain visible.
 Existing lint, formatting, and type debt intentionally remains visible.
 
 Pytest collects `tests/` and adds the repository root to its import path. The root

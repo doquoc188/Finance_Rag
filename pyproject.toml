@@ -41,6 +41,9 @@ dependencies = [
 
 [project.optional-dependencies]
 groq = ["langchain-groq>=0.1.0"]
+anthropic = ["langchain-anthropic>=1.7.5"]
+google = ["langchain-google-genai>=4.4.0"]
+ollama = ["langchain-ollama>=1.1.0"]
 # Add other provider extras here when their adapters are scoped. Reserve GraphRAG
 # for a separate extra once implemented; do not install a speculative graph stack.
 
@@ -110,7 +113,12 @@ show_error_codes = true
 pretty = false
 
 [[tool.mypy.overrides]]
-# This lazy-imported SDK is intentionally absent from the default installation.
-# Only missing imports for this optional provider are tolerated.
-module = ["langchain_groq", "langchain_groq.*"]
+# Lazy integrations are absent from the default installation. Only missing imports
+# for these optional namespaces are tolerated; check installed SDK types separately.
+module = [
+    "langchain_groq", "langchain_groq.*",
+    "langchain_anthropic", "langchain_anthropic.*",
+    "langchain_google_genai", "langchain_google_genai.*",
+    "langchain_ollama", "langchain_ollama.*",
+]
 ignore_missing_imports = true
