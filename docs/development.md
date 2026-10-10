@@ -24,6 +24,18 @@ state or automatic provider discovery. Concrete adapters are deferred to Phase 1
 the legacy runtime still uses its existing model construction. See the
 [provider contract report](phase-1.1b-baseline.md) for semantics and verification.
 
+Phase 1.1C adds `create_openai_chat_model` and `create_groq_chat_model` in their
+respective `finrag.providers.openai` / `.groq` modules. Import and register factories
+explicitly on your own registry; there is no automatic registration or role resolver.
+Factories read `OPENAI_API_KEY` / `GROQ_API_KEY` only when called, do not load `.env`,
+and keep credentials out of model-role settings. Integrations import lazily; Groq
+still requires `uv sync --extra groq`. Configuration, dependency, and initialization
+failures raise distinct errors without fallback. Only outer messages are safe for
+clients; retained exception causes may contain SDK-provided secrets. Both factories
+return the integration's `BaseChatModel` unchanged, preserving Runnable and standard
+structured-output interfaces. The legacy runtime remains unmigrated. See the
+[adapter report](phase-1.1c-baseline.md) for verified versions, arguments, and results.
+
 ## Python and installation
 
 Use Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).

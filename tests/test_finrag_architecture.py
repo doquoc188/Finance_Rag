@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 import finrag
+import finrag.config
 import finrag.domain
 import finrag.providers
 
@@ -18,6 +19,11 @@ import finrag.providers
     ("package_name", "package_dir", "allowed_packages"),
     [
         ("finrag.domain", Path(finrag.domain.__file__).parent, ("finrag.domain",)),
+        (
+            "finrag.config",
+            Path(finrag.config.__file__).parent,
+            ("finrag.config", "finrag.domain", "pydantic", "pydantic_settings"),
+        ),
         (
             "finrag.providers",
             Path(finrag.providers.__file__).parent,
@@ -31,7 +37,18 @@ def test_package_import_boundaries(
     for path in package_dir.rglob("*.py"):
         relative_parent = path.parent.relative_to(package_dir)
         package = ".".join((package_name, *relative_parent.parts))
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        adapter_name = path.stem if package_name == "finrag.providers" else ""
+        integration = {"openai": "langchain_openai", "groq": "langchain_groq"}.get(adapter_name)
+        permitted = allowed_packages + (("pydantic", integration) if integration else ())
+        factory_nodes = {
+            child
+            for definition in tree.body
+            if isinstance(definition, ast.FunctionDef)
+            and definition.name == f"create_{adapter_name}_chat_model"
+            for child in ast.walk(definition)
+        }
+        for node in ast.walk(tree):
             modules: list[str] = []
             if isinstance(node, ast.Import):
                 modules = [alias.name for alias in node.names]
@@ -39,13 +56,74 @@ def test_package_import_boundaries(
                 module = "." * node.level + (node.module or "")
                 modules = [resolve_name(module, package) if node.level else module]
             for module in modules:
+                if integration and (module == integration or module.startswith(integration + ".")):
+                    assert node in factory_nodes, f"{path.name}: integration import must be lazy"
                 assert (
                     any(
                         module == allowed or module.startswith(allowed + ".")
-                        for allowed in allowed_packages
+                        for allowed in permitted
                     )
                     or module.split(".")[0] in sys.stdlib_module_names
                 ), f"{package_name} dependency boundary violated: {path.name} imports {module}"
+
+
+def test_provider_imports_need_no_sdks_credentials_network_or_global_registry(
+    tmp_path: Path,
+) -> None:
+    # Cold process avoids already-imported integrations hiding eager imports.
+    script = """
+import importlib
+import importlib.abc
+import socket
+import sys
+
+attempts = []
+class BlockIntegrations(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.')[0] in {'langchain_openai', 'langchain_groq', 'openai', 'groq'}:
+            attempts.append(fullname)
+            raise AssertionError('Provider SDK imported before factory call')
+
+def block_network(*args, **kwargs):
+    attempts.append('network')
+    raise AssertionError('Network attempted during import')
+
+sys.meta_path.insert(0, BlockIntegrations())
+socket.socket.connect = block_network
+socket.socket.connect_ex = block_network
+socket.create_connection = block_network
+modules = [importlib.import_module(name) for name in (
+    'finrag', 'finrag.providers', 'finrag.providers.registry',
+    'finrag.providers.openai', 'finrag.providers.groq',
+)]
+from finrag.providers import ChatProviderRegistry, ProviderNotRegisteredError
+for module in modules:
+    assert not any(isinstance(value, ChatProviderRegistry) for value in vars(module).values())
+for name in ('openai', 'groq'):
+    try:
+        ChatProviderRegistry().get(name)
+    except ProviderNotRegisteredError:
+        pass
+    else:
+        raise AssertionError('Provider was automatically registered')
+assert not attempts, attempts
+print('provider imports are isolated')
+"""
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if key.upper() not in {"OPENAI_API_KEY", "GROQ_API_KEY"}
+    }
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", script],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    assert result.stdout.strip() == "provider imports are isolated"
 
 
 def test_domain_imports_and_constructs_values_without_site_packages(tmp_path: Path) -> None:

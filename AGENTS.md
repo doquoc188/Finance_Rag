@@ -11,7 +11,8 @@
 - `src/finrag/domain/`: immutable standard-library evidence/retrieval values; no framework,
   provider, configuration, or legacy `app` imports. The legacy runtime is not migrated yet.
 - `src/finrag/providers/`: explicit instance-owned chat factory registry; may import config
-  contracts and LangChain Core, never legacy `app`. Concrete adapters remain deferred.
+  contracts and LangChain Core, never legacy `app`. Import concrete integrations lazily
+  inside their adapter factories; keep credentials out of general settings/domain.
 - `app/api/`: HTTP validation, transport schemas, and service invocation.
 - `app/core/`: parsing, indexing/retrieval, and model access; no UI/HTTP dependencies.
 - `app/graph/`: LangGraph state and workflow orchestration, not a knowledge graph.
