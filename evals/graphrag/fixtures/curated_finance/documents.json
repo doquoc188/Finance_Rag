@@ -1,0 +1,26 @@
+[
+  {
+    "id": "doc_northstar_2024",
+    "title": "Synthetic Northstar 2024 expansion note",
+    "source": "synthetic://northstar/2024-expansion",
+    "text": "Synthetic Northstar Manufacturing approved a 50 billion VND expansion program for a new production line. This is curated test data, not a real-world claim."
+  },
+  {
+    "id": "doc_delta_2024",
+    "title": "Synthetic Delta 2024 supply note",
+    "source": "synthetic://delta/2024-supply",
+    "text": "Synthetic Delta Components supplies automation equipment to Northstar's expansion program under a 20 billion VND test contract. This is curated test data."
+  },
+  {
+    "id": "doc_harbor_2024",
+    "title": "Synthetic Harbor 2024 financing note",
+    "source": "synthetic://harbor/2024-financing",
+    "text": "Synthetic Harbor Bank provides a 10 billion VND working-capital facility to Delta Components for the test supply contract. This is curated test data."
+  },
+  {
+    "id": "doc_market_2024",
+    "title": "Synthetic regional market note",
+    "source": "synthetic://market/2024-demand",
+    "text": "A synthetic regional market indicator links the expansion program to a 12.5 percent test demand increase. This is curated test data."
+  }
+]

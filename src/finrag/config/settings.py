@@ -75,10 +75,11 @@ class IndexingSettings(_ConfigModel):
 
 
 class GraphRAGSettings(_ConfigModel):
-    """Opt-in graph index identity only; no graph adapter is initialized."""
+    """Opt-in graph workspace identity only; no graph adapter is initialized."""
 
     enabled: bool = False
     index_name: str | None = Field(default=None, min_length=1)
+    root_dir: Path = Path(".finrag/graphrag")
 
     @model_validator(mode="after")
     def validate_enabled_index(self) -> Self:

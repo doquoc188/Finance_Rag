@@ -1,0 +1,5 @@
+{
+  "description": "Synthetic curated finance graph for GraphRAG integration tests",
+  "schema_version": 1,
+  "synthetic": true
+}

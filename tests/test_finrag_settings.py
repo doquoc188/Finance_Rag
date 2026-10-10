@@ -42,6 +42,7 @@ def test_defaults_need_no_credentials_and_roles_are_separate() -> None:
     assert settings.retrieval.max_rewrite_attempts == 2
     assert settings.graphrag.enabled is False
     assert settings.graphrag.index_name is None
+    assert settings.graphrag.root_dir == Path(".finrag/graphrag")
     assert "temperature" not in EmbeddingSettings.model_fields
 
 
@@ -80,6 +81,7 @@ def test_nested_environment_loading(monkeypatch: pytest.MonkeyPatch) -> None:
         "FINRAG_RETRIEVAL__STRATEGY": "graph",
         "FINRAG_GRAPHRAG__ENABLED": "true",
         "FINRAG_GRAPHRAG__INDEX_NAME": "annual-reports",
+        "FINRAG_GRAPHRAG__ROOT_DIR": "state/graphrag",
     }
     for name, value in values.items():
         monkeypatch.setenv(name, value)
@@ -101,7 +103,11 @@ def test_nested_environment_loading(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.retrieval.reranker_enabled is True
     assert settings.retrieval.reranker_model == "local/reranker"
     assert settings.retrieval.strategy is RetrievalStrategy.GRAPH
-    assert settings.graphrag == GraphRAGSettings(enabled=True, index_name="annual-reports")
+    assert settings.graphrag == GraphRAGSettings(
+        enabled=True,
+        index_name="annual-reports",
+        root_dir=Path("state/graphrag"),
+    )
 
 
 def test_partial_role_override_keeps_defaults_and_other_roles(

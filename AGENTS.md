@@ -19,6 +19,9 @@
 - `src/finrag/indexing/`: deterministic identities, content fingerprints, immutable
   manifests/plans/results, and atomic JSON persistence; standard library and domain only.
   Qdrant, LangChain documents, embeddings, and application settings stay in `app/core/`.
+- `src/finrag/graph_rag/`: project-owned graph query contracts and strict curated-artifact
+  validation. Only its concrete Microsoft adapter may lazily import GraphRAG/pandas; it
+  remains separate from the normal application runtime and retrieval interfaces.
 - `src/finrag/providers/`: explicit instance-owned chat factory registry; may import config
   contracts and LangChain Core, never legacy `app`. Import concrete integrations lazily
   inside their adapter factories; keep credentials out of general settings/domain.
@@ -68,9 +71,13 @@
   correction; SUPPORTED / CONTRADICTED / NOT_FOUND must not trigger retrieval rewriting.
 
 ## GraphRAG isolation
-- GraphRAG is not implemented. LangGraph orchestration is not GraphRAG.
-- Future GraphRAG must be opt-in, with separate dependencies, configuration, storage,
-  and tests. Its absence must not break default imports, indexing, or retrieval.
+- The Phase 1.5 Microsoft GraphRAG vertical slice is explicit and opt-in; LangGraph
+  orchestration is not GraphRAG. LOCAL/GLOBAL calls must use the separate adapter/CLI.
+- Keep its dependencies, workspace, credentials, artifacts, and tests isolated. Its
+  absence must not break default imports, indexing, retrieval, or application runtime.
+- Never route the application automatically, fall back between GraphRAG and Hybrid RAG,
+  or run live/indexing operations during default tests. Live use requires an explicit
+  `GRAPHRAG_API_KEY`; do not copy another provider credential.
 
 ## Financial numeric accuracy
 - Preserve currency, scale, sign, period, entity, and locale-specific number formatting.

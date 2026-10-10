@@ -1,0 +1,11 @@
+[
+  {
+    "id": "report_fixture_finance",
+    "community": 0,
+    "title": "Synthetic finance dependency chain",
+    "summary": "A curated synthetic chain connects a manufacturer, expansion program, supplier, bank, and market indicator.",
+    "full_content": "Synthetic Northstar Manufacturing approves an expansion program. Synthetic Delta Components supplies that program, and synthetic Harbor Bank finances Delta. A separate synthetic market indicator is linked to the program. All values and entities are test data and are not verified real-world facts.",
+    "rank": 1.0,
+    "level": 0
+  }
+]

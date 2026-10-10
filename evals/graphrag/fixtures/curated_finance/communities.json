@@ -1,0 +1,29 @@
+[
+  {
+    "id": "community_fixture_finance",
+    "community": 0,
+    "title": "Synthetic finance dependency chain",
+    "level": 0,
+    "parent": -1,
+    "children": [],
+    "entity_ids": [
+      "ent_northstar",
+      "ent_expansion",
+      "ent_delta",
+      "ent_harbor",
+      "ent_market"
+    ],
+    "relationship_ids": [
+      "rel_northstar_expansion",
+      "rel_expansion_delta",
+      "rel_delta_harbor",
+      "rel_expansion_market"
+    ],
+    "text_unit_ids": [
+      "tu_northstar_expansion",
+      "tu_delta_supply",
+      "tu_harbor_financing",
+      "tu_market_demand"
+    ]
+  }
+]

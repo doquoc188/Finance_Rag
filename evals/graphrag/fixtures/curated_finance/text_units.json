@@ -1,0 +1,34 @@
+[
+  {
+    "id": "tu_northstar_expansion",
+    "text": "Synthetic Northstar Manufacturing approved a 50 billion VND expansion program for a new production line.",
+    "document_id": "doc_northstar_2024",
+    "entity_ids": ["ent_northstar", "ent_expansion"],
+    "relationship_ids": ["rel_northstar_expansion"],
+    "n_tokens": 17
+  },
+  {
+    "id": "tu_delta_supply",
+    "text": "Synthetic Delta Components supplies automation equipment to the expansion program under a 20 billion VND test contract.",
+    "document_id": "doc_delta_2024",
+    "entity_ids": ["ent_delta", "ent_expansion"],
+    "relationship_ids": ["rel_expansion_delta"],
+    "n_tokens": 18
+  },
+  {
+    "id": "tu_harbor_financing",
+    "text": "Synthetic Harbor Bank provides a 10 billion VND working-capital facility to Delta Components for the test supply contract.",
+    "document_id": "doc_harbor_2024",
+    "entity_ids": ["ent_harbor", "ent_delta"],
+    "relationship_ids": ["rel_delta_harbor"],
+    "n_tokens": 19
+  },
+  {
+    "id": "tu_market_demand",
+    "text": "A synthetic regional market indicator links the expansion program to a 12.5 percent test demand increase.",
+    "document_id": "doc_market_2024",
+    "entity_ids": ["ent_market", "ent_expansion"],
+    "relationship_ids": ["rel_expansion_market"],
+    "n_tokens": 16
+  }
+]

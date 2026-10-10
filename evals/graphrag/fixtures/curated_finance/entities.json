@@ -1,0 +1,37 @@
+[
+  {
+    "id": "ent_northstar",
+    "title": "Northstar Manufacturing",
+    "type": "organization",
+    "description": "A synthetic manufacturer used only in the curated fixture.",
+    "text_unit_ids": ["tu_northstar_expansion"]
+  },
+  {
+    "id": "ent_expansion",
+    "title": "Expansion Program",
+    "type": "project",
+    "description": "A synthetic production-line expansion program.",
+    "text_unit_ids": ["tu_northstar_expansion", "tu_delta_supply", "tu_market_demand"]
+  },
+  {
+    "id": "ent_delta",
+    "title": "Delta Components",
+    "type": "organization",
+    "description": "A synthetic equipment supplier used only in the curated fixture.",
+    "text_unit_ids": ["tu_delta_supply", "tu_harbor_financing"]
+  },
+  {
+    "id": "ent_harbor",
+    "title": "Harbor Bank",
+    "type": "organization",
+    "description": "A synthetic bank used only in the curated fixture.",
+    "text_unit_ids": ["tu_harbor_financing"]
+  },
+  {
+    "id": "ent_market",
+    "title": "Regional Market Indicator",
+    "type": "indicator",
+    "description": "A synthetic market indicator with no real-world meaning.",
+    "text_unit_ids": ["tu_market_demand"]
+  }
+]

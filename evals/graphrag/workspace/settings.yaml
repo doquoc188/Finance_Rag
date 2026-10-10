@@ -1,0 +1,48 @@
+# Microsoft GraphRAG 3.3.0 query workspace for the curated synthetic fixture.
+# Keep the real value in this workspace's ignored .env or the process environment.
+completion_models:
+  default_completion_model:
+    model_provider: openai
+    model: gpt-4o-mini
+    auth_method: api_key
+    api_key: ${GRAPHRAG_API_KEY}
+    retry:
+      type: exponential_backoff
+
+embedding_models:
+  default_embedding_model:
+    model_provider: openai
+    model: text-embedding-3-small
+    auth_method: api_key
+    api_key: ${GRAPHRAG_API_KEY}
+    retry:
+      type: exponential_backoff
+
+input_storage:
+  type: file
+  base_dir: input
+
+output_storage:
+  type: file
+  base_dir: output
+
+reporting:
+  type: file
+  base_dir: logs
+
+cache:
+  type: json
+  storage:
+    type: file
+    base_dir: cache
+
+vector_store:
+  type: lancedb
+  db_uri: output/lancedb
+
+local_search:
+  completion_model_id: default_completion_model
+  embedding_model_id: default_embedding_model
+
+global_search:
+  completion_model_id: default_completion_model

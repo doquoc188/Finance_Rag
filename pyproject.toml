@@ -44,8 +44,8 @@ groq = ["langchain-groq>=0.1.0"]
 anthropic = ["langchain-anthropic>=1.7.5"]
 google = ["langchain-google-genai>=4.4.0"]
 ollama = ["langchain-ollama>=1.1.0"]
-# Add other provider extras here when their adapters are scoped. Reserve GraphRAG
-# for a separate extra once implemented; do not install a speculative graph stack.
+graphrag = ["graphrag==3.3.0"]
+# Add other provider extras here when their adapters are scoped.
 
 [dependency-groups]
 dev = [
