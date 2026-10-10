@@ -25,7 +25,7 @@ def test_hybrid_retriever():
     assert len(results) == 1
     assert "FPT" in results[0].page_content
 
-def test_finrag_langgraph_invocation():
+def test_finrag_langgraph_invocation(workflow_chat_model):
     initial_state = {
         "question": "Doanh thu năm 2023 của FPT là bao nhiêu?",
         "retry_count": 0,
@@ -34,3 +34,11 @@ def test_finrag_langgraph_invocation():
     result = finrag_app.invoke(initial_state)
     assert "generation" in result
     assert result["generation"] is not None
+    assert result["generation"] == "Offline workflow test response."
+    assert result["question"] == initial_state["question"]
+    assert result["is_relevant"] == "yes"
+    assert result["retry_count"] == 0
+    assert result["web_search_needed"] is False
+    assert result["citations"]
+    assert result["citations"][0]["source"] == result["documents"][0].metadata["source"]
+    assert result["citations"][0]["page"] == result["documents"][0].metadata["page"]

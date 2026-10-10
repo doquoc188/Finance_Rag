@@ -4,7 +4,18 @@ __pycache__/
 *$py.class
 venv/
 env/
+.venv/
+.tools/
 .env
+.env.*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
 
 # Uploads & Temp Data
 data/uploads/*

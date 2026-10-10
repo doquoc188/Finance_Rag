@@ -1,0 +1,15 @@
+# Local hooks use the same locked Ruff version as the command-line checks.
+# Install explicitly with `uv run pre-commit install`; never change Git hooks implicitly.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Ruff lint
+        entry: uv run --locked ruff check
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format-check
+        name: Ruff format check
+        entry: uv run --locked ruff format --check
+        language: system
+        types_or: [python, pyi]

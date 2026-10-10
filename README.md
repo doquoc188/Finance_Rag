@@ -1,5 +1,10 @@
 # 📈 FinRAG Analyst: Production-Grade Self-Corrective Financial RAG Agent
 
+> **Phase 1.0 — Development foundation:** Quy trình phát triển mới dùng Python 3.12
+> và `uv`; xem [hướng dẫn phát triển](docs/development.md) và
+> [kết quả kiểm tra](docs/phase-1.0-baseline.md). Các tuyên bố production/benchmark
+> trong nội dung cũ bên dưới chưa được xác thực; Phase 1.0 không bổ sung tính năng RAG.
+
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![LangChain](https://img.shields.io/badge/LangChain-v0.2-green)
 ![LangGraph](https://img.shields.io/badge/LangGraph-StateGraph-orange)

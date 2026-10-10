@@ -1,0 +1,105 @@
+[project]
+name = "finance-rag"
+version = "1.0.0"
+description = "Financial-report retrieval and question-answering application"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+# Preserve the legacy runtime dependency ranges. OpenAI is the configured default;
+# local embeddings and Ollama currently use langchain-community.
+dependencies = [
+    "langchain>=0.2.0",
+    "langchain-community>=0.2.0",
+    "langchain-core>=0.2.0",
+    "langgraph>=0.1.0",
+    "langchain-openai>=0.1.0",
+    "langsmith>=0.1.0",
+    "qdrant-client>=1.9.0",
+    "rank-bm25>=0.2.2",
+    "sentence-transformers>=3.0.0",
+    "flashrank>=0.2.0",
+    "pypdf>=4.2.0",
+    "pdfplumber>=0.11.0",
+    "tiktoken>=0.7.0",
+    "tavily-python>=0.3.0",
+    "duckduckgo-search>=6.0.0",
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    "python-multipart>=0.0.9",
+    "httpx>=0.27.0",
+    "streamlit>=1.35.0",
+    "python-dotenv>=1.0.1",
+    # Already imported directly; previously only installed transitively.
+    "requests>=2.31.0",
+    "typing-extensions>=4.8.0",
+]
+
+[project.optional-dependencies]
+groq = ["langchain-groq>=0.1.0"]
+# Add other provider extras here when their adapters are scoped. Reserve GraphRAG
+# for a separate extra once implemented; do not install a speculative graph stack.
+
+[dependency-groups]
+dev = [
+    "ruff>=0.11.0",
+    "mypy>=1.15.0",
+    "pytest>=8.2.0",
+    "pytest-cov>=6.0.0",
+    "pre-commit>=4.0.0",
+]
+
+[tool.uv]
+# This is a runnable application with namespace packages, not a distributable wheel.
+package = false
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+minversion = "8.2"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-config --strict-markers"
+markers = [
+    "integration: explicit external-service/model integration checks (none isolated yet)",
+]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+# No coverage target until a meaningful baseline has been established.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [".tools"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+# Existing violations stay visible; do not blanket-exclude application modules.
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["app"]
+namespace_packages = true
+explicit_package_bases = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+show_error_codes = true
+# Compact diagnostics avoid printing Vietnamese source through Windows code pages.
+pretty = false
+
+[[tool.mypy.overrides]]
+# This lazy-imported SDK is intentionally absent from the default installation.
+# Only missing imports for this optional provider are tolerated.
+module = ["langchain_groq", "langchain_groq.*"]
+ignore_missing_imports = true
