@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sync locked dependencies
+        run: uv sync --locked
+
+      - name: Run offline tests
+        run: uv run pytest
+
+      - name: Lint maintained architecture and tests
+        run: uv run ruff check src/finrag tests
+
+      - name: Check formatting for maintained architecture and tests
+        run: uv run ruff format --check src/finrag tests
+
+      - name: Type-check maintained architecture
+        run: uv run mypy src/finrag

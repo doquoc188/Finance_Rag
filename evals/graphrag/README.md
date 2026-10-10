@@ -86,11 +86,25 @@ GLOBAL is the immediately runnable live slice because its manually curated commu
 does not require that entity vector table. No live command is part of pytest or the normal
 quality gates.
 
+## Recorded GLOBAL live evidence
+
+On 2026-10-10, one deliberate GLOBAL smoke used Microsoft GraphRAG 3.3.0. Offline validation
+reported four documents, five entities, four relationships, four text units, and one
+community report. The hosted query returned a response and provenance containing all four
+curated document IDs. No credential appeared in the observed terminal output, and cost was
+limited to this one small deliberate hosted query.
+
+This establishes live integration capability only. It does not measure answer quality or
+show that GraphRAG outperforms the normal hybrid path. A real LOCAL query has not been run.
+Do not commit terminal screenshots containing credentials, private content, personal data,
+or avoidable local absolute paths.
+
 ## Isolation and limits
 
 GraphRAG is not connected to `app/runtime.py`. The normal Dense + BM25 → RRF → optional
 reranker path remains the application behavior. The fixture proves schema validation,
-dispatch, result translation, and multi-document provenance with mocked Microsoft calls;
-it does not measure retrieval quality or prove a provider/model response. The public
+dispatch, result translation, and multi-document provenance offline with mocked Microsoft
+calls; the recorded GLOBAL smoke additionally proves a real hosted response was returned.
+Neither is a retrieval-quality benchmark. The public
 GraphRAG query API warns that compatibility may change, so the package and workspace schema
 are pinned together at 3.3.0.

@@ -136,7 +136,9 @@ and health disclosure debt is not redesigned here.
 
 Implemented: runtime model-role injection, explicit instance ownership, and offline
 compiled graph/composition/startup tests, plus the input corrections described below.
-Still pending: derived financial calculations, GraphRAG, and evaluation expansion. See the
+Still pending: derived financial calculations, automatic GraphRAG routing, and generation
+evaluation. The optional adapter is documented in the
+[GraphRAG demo notes](../evals/graphrag/README.md). See the
 [Phase 1.1F report](phase-1.1f-baseline.md) for measured checks and deferred defects.
 
 ## Grounded model inputs (Phase 1.2A)
@@ -318,8 +320,8 @@ and services; the offline restrictions below apply to tests only.
   interfaces; `uv.lock` fixes exact versions. Google GenAI requires Tenacity below 9.2,
   so this phase changes the shared lock from 9.2.1 to 9.1.4; other existing versions
   are unchanged. The full offline suite verifies compatibility, not live model behavior.
-- Future provider SDKs belong in `project.optional-dependencies`. A future GraphRAG
-  extra must be separate; no placeholder SDK or graph dependency is installed now.
+- Future provider SDKs belong in `project.optional-dependencies`. Microsoft GraphRAG remains
+  a separate `graphrag` extra and is omitted by plain `uv sync`.
 - `requests` and `typing-extensions` become explicit dependencies because existing
   modules import them directly. Other existing runtime packages remain, including
   currently unused packages; removing them is a separate dependency audit.
@@ -563,8 +565,8 @@ generation/LLM evaluation was added.
 These are observations, not fixes or acceptance claims:
 
 - `app/api/routes.py` accepts company/year but does not pass them into chat retrieval.
-  Indexing still replaces the collection on ingestion; durable upstream IDs, incremental
-  updates, transactional recovery, concurrency isolation, and idempotent ingestion are absent.
+  Incremental indexing preserves absent documents and skips unchanged content, but has no
+  document-deletion API, interrupted-commit recovery, or concurrent-writer coordination.
 - Phase 1.2A supplies context to generation and question + document to grading.
   Phase 1.2B verifies explicit quantities deterministically with conservative lexical
   context and tri-state results. Derived arithmetic, locale ambiguity, inferred table
@@ -572,15 +574,16 @@ These are observations, not fixes or acceptance claims:
 - Phase 1.0.2 deletes `SimpleFakeLLM` and the other canned chat-answer fallbacks.
   Constant embedding fallback, mock retrieval evidence, heuristic grading, and the
   unregistered legacy web helper remain separate debt; they are not model-quality evidence.
-- LangGraph does not loop back after fact checking. GraphRAG is not implemented.
+- LangGraph does not loop back after fact checking. The optional GraphRAG LOCAL/GLOBAL
+  adapter is isolated from the application runtime; automatic routing is not implemented.
 - PDF failure falls back to decoding bytes as text, not pypdf. Zero-valued table cells
   can become empty strings; character splitting does not preserve table boundaries.
 - Upload paths use a client-supplied filename; error/health responses can expose internal
   details, CORS is permissive, and shared retriever state has no tenant isolation.
   These findings require a separate security/ingestion task before external deployment.
-- README/UI contain unsupported production, numeric-accuracy, streaming, reranker, and
-  benchmark claims. No supporting evaluation artifacts were found.
-  The historical claims must not be cited as validated results.
+- Legacy UI and API metadata still contain unsupported production wording. Current README
+  evidence is limited to the checked artifacts; historical claims must not be cited as
+  validated results.
 
 See the [Phase 1.0 verification baseline](phase-1.0-baseline.md) for the original results,
 the [Phase 1.0.1 baseline](phase-1.0.1-baseline.md) for its green offline test suite,

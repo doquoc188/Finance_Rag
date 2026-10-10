@@ -17,6 +17,7 @@ env/
 htmlcov/
 coverage.xml
 .finrag/
+evals/graphrag/workspace/logs/
 build/
 dist/
 *.egg-info/
