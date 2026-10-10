@@ -1,0 +1,41 @@
+"""Framework-independent retrieval evaluation contracts and metrics."""
+
+from .retrieval import (
+    EVALUATION_RETRIEVAL_LIMIT,
+    RETRIEVAL_STRATEGY_NAMES,
+    BenchmarkQuery,
+    EvaluationReport,
+    QueryEvaluation,
+    RelevantHit,
+    RetrievalBenchmark,
+    RetrievalEvaluation,
+    RetrievalStrategyName,
+    build_evaluation_report,
+    evaluate_retriever,
+    format_markdown_report,
+    load_retrieval_benchmark,
+    recall_at_k,
+    reciprocal_rank_at_k,
+    render_evaluation_json,
+    write_evaluation_outputs,
+)
+
+__all__ = [
+    "EVALUATION_RETRIEVAL_LIMIT",
+    "RETRIEVAL_STRATEGY_NAMES",
+    "BenchmarkQuery",
+    "EvaluationReport",
+    "QueryEvaluation",
+    "RelevantHit",
+    "RetrievalBenchmark",
+    "RetrievalEvaluation",
+    "RetrievalStrategyName",
+    "build_evaluation_report",
+    "evaluate_retriever",
+    "format_markdown_report",
+    "load_retrieval_benchmark",
+    "recall_at_k",
+    "reciprocal_rank_at_k",
+    "render_evaluation_json",
+    "write_evaluation_outputs",
+]

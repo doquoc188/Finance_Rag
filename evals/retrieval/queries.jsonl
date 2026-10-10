@@ -1,0 +1,27 @@
+{"query_id":"q_fpt_eps_2025_vi","question":"EPS của FPT năm 2025 là bao nhiêu?","relevant_chunk_ids":["bench_fpt_eps_2025_01"],"category":"hard_year","language":"vi"}
+{"query_id":"q_fpt_eps_2024_en","question":"What was FPT earnings per share in FY2024?","relevant_chunk_ids":["bench_fpt_eps_2024_01"],"category":"hard_year","language":"en"}
+{"query_id":"q_fpt_revenue_2025_vi","question":"Doanh thu hợp nhất FPT năm 2025 đạt mức nào?","relevant_chunk_ids":["bench_fpt_revenue_2025_01"],"category":"exact_company_metric","language":"vi"}
+{"query_id":"q_fpt_sales_2024_en","question":"What were FPT sales in FY2024?","relevant_chunk_ids":["bench_fpt_revenue_2024_01"],"category":"semantic_paraphrase","language":"en"}
+{"query_id":"q_fpt_pbt_2025_mixed","question":"LNTT / profit before tax của FPT FY2025 là bao nhiêu?","relevant_chunk_ids":["bench_fpt_pbt_2025_01"],"category":"bilingual_terminology","language":"mixed"}
+{"query_id":"q_fpt_technology_share_2025_vi","question":"Khối Công nghệ đóng góp bao nhiêu phần trăm doanh thu FPT năm 2025?","relevant_chunk_ids":["bench_fpt_technology_2025_01"],"category":"hard_metric","language":"vi"}
+{"query_id":"q_fpt_q1_revenue_growth_2025_vi","question":"Tăng trưởng doanh thu FPT quý 1 năm 2025 là bao nhiêu?","relevant_chunk_ids":["bench_fpt_q1_revenue_2025_01"],"category":"hard_period","language":"vi"}
+{"query_id":"q_vnm_gross_margin_2025_vi","question":"Biên lợi nhuận gộp VNM năm 2025 là bao nhiêu?","relevant_chunk_ids":["bench_vnm_gross_margin_2025_01"],"category":"hard_year","language":"vi"}
+{"query_id":"q_vnm_sales_2025_en","question":"What were Vinamilk full-year sales in 2025?","relevant_chunk_ids":["bench_vnm_revenue_2025_01"],"category":"semantic_paraphrase","language":"en"}
+{"query_id":"q_vnm_net_profit_2024_vi","question":"Lợi nhuận ròng của VNM năm 2024 đạt bao nhiêu?","relevant_chunk_ids":["bench_vnm_net_profit_2024_01"],"category":"semantic_paraphrase","language":"vi"}
+{"query_id":"q_vnm_q1_growth_2025_en","question":"How fast did VNM revenue grow in Q1 2025?","relevant_chunk_ids":["bench_vnm_q1_revenue_2025_01"],"category":"hard_period","language":"en"}
+{"query_id":"q_hpg_revenue_2025_vi","question":"Doanh thu HPG năm 2025 là bao nhiêu?","relevant_chunk_ids":["bench_hpg_revenue_2025_01"],"category":"exact_company_metric","language":"vi"}
+{"query_id":"q_hpg_steel_volume_2025_en","question":"How many tonnes of steel did HPG sell in 2025?","relevant_chunk_ids":["bench_hpg_steel_sales_2025_01"],"category":"hard_metric","language":"en"}
+{"query_id":"q_hpg_gross_margin_2024_en","question":"What was HPG gross margin in FY2024?","relevant_chunk_ids":["bench_hpg_gross_margin_2024_01"],"category":"hard_year","language":"en"}
+{"query_id":"q_hpg_net_profit_2025_vi","question":"Lợi nhuận sau thuế Hòa Phát năm 2025 đạt mức nào?","relevant_chunk_ids":["bench_hpg_net_profit_2025_01"],"category":"exact_company_metric","language":"vi"}
+{"query_id":"q_mwg_online_share_2025_en","question":"What share of MWG sales came from online channels in 2025?","relevant_chunk_ids":["bench_mwg_online_share_2025_01"],"category":"semantic_paraphrase","language":"en"}
+{"query_id":"q_mwg_revenue_2024_vi","question":"Doanh thu thuần MWG năm 2024 là bao nhiêu?","relevant_chunk_ids":["bench_mwg_revenue_2024_01"],"category":"hard_year","language":"vi"}
+{"query_id":"q_mwg_bhx_growth_2025_vi","question":"Doanh thu Bách Hóa Xanh tăng trưởng thế nào trong năm 2025?","relevant_chunk_ids":["bench_mwg_bhx_growth_2025_01"],"category":"hard_metric","language":"vi"}
+{"query_id":"q_mwg_net_profit_2025_en","question":"What was Mobile World net profit for FY2025?","relevant_chunk_ids":["bench_mwg_net_profit_2025_01"],"category":"exact_company_metric","language":"en"}
+{"query_id":"q_vcb_nim_2025_mixed","question":"NIM (net interest margin) của VCB năm 2025 là bao nhiêu?","relevant_chunk_ids":["bench_vcb_nim_2025_01"],"category":"bilingual_terminology","language":"mixed"}
+{"query_id":"q_vcb_bad_loan_ratio_2024_en","question":"What was VCB's bad-loan ratio at year-end 2024?","relevant_chunk_ids":["bench_vcb_npl_2024_01"],"category":"semantic_paraphrase","language":"en"}
+{"query_id":"q_vcb_pbt_2025_en","question":"How much profit before tax did Vietcombank report in 2025?","relevant_chunk_ids":["bench_vcb_pbt_2025_01"],"category":"exact_company_metric","language":"en"}
+{"query_id":"q_vcb_credit_growth_2025_vi","question":"Tăng trưởng tín dụng VCB năm 2025 là bao nhiêu phần trăm?","relevant_chunk_ids":["bench_vcb_credit_growth_2025_01"],"category":"hard_metric","language":"vi"}
+{"query_id":"q_ssi_brokerage_share_2025_en","question":"What was SSI equity brokerage market share in 2025?","relevant_chunk_ids":["bench_ssi_brokerage_share_2025_01"],"category":"hard_year","language":"en"}
+{"query_id":"q_ssi_revenue_2024_en","question":"What total operating revenue did SSI record in FY2024?","relevant_chunk_ids":["bench_ssi_revenue_2024_01"],"category":"exact_company_metric","language":"en"}
+{"query_id":"q_fpt_revenue_and_pbt_2025_mixed","question":"FPT FY2025 revenue và profit before tax là bao nhiêu?","relevant_chunk_ids":["bench_fpt_revenue_2025_01","bench_fpt_pbt_2025_01"],"category":"multi_relevant","language":"mixed"}
+{"query_id":"q_vnm_hpg_gross_margin_2025_en","question":"Compare the 2025 gross margins reported for VNM and HPG.","relevant_chunk_ids":["bench_vnm_gross_margin_2025_01","bench_hpg_gross_margin_2025_01"],"category":"multi_relevant","language":"en"}

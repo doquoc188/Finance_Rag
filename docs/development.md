@@ -476,6 +476,27 @@ uv run python -c "from finrag.retrieval.bge import BgeCrossEncoderReranker; r = 
 See the [Phase 1.3B report](phase-1.3b-baseline.md) for the offline regression evidence and
 remaining limitations.
 
+## Retrieval evaluation harness (Phase 1.3C)
+
+`finrag.evaluation` now provides strict JSONL benchmark loading, exact Recall@K and
+reciprocal-rank math, a fixed-name retriever runner, per-query diagnostics, deterministic
+JSON, and a rounded Markdown table. It depends only on standard-library, domain, and
+retrieval contracts. Application/provider/graph/model runtimes remain outside the core.
+
+The versioned fixture under `evals/retrieval` contains 47 explicitly identified synthetic
+finance chunks and 27 manually judged questions. Gold IDs do not use production chunk-ID
+generation and were not produced by a retriever or LLM. All four strategies share the same
+data and fixed 20/20/20/10 hybrid policy; production top-k settings are unchanged.
+
+The manual composition runner uses actual BM25 directly. Where local assets exist, it uses
+the current Qdrant dense adapter with in-memory cosine Qdrant and the current local MiniLM
+embedding path, then actual Hybrid RRF and the existing BGE adapter. Model resolution is
+local-only with no fallback. The recorded baseline measured BM25 only; Dense, Hybrid RRF,
+and reranked strategies are marked NOT MEASURED because their local model snapshots were
+absent. See the [benchmark README](../evals/retrieval/README.md) and
+[Phase 1.3C report](phase-1.3c-baseline.md). No retrieval parameters were tuned and no
+generation/LLM evaluation was added.
+
 ## Existing technical debt observed by source inspection
 
 These are observations, not fixes or acceptance claims:

@@ -1,0 +1,782 @@
+{
+  "benchmark": "finance-retrieval-curated-v1",
+  "configuration": {
+    "dense_top_k": 20,
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "final_top_k": 10,
+    "fused_top_k": 20,
+    "model_loading": "local_files_only",
+    "python_version": "3.12.15",
+    "qdrant_client_version": "1.19.1",
+    "rank_bm25_version": "0.2.2",
+    "requested_strategies": [
+      "dense",
+      "bm25",
+      "hybrid_rrf",
+      "hybrid_rrf_reranked"
+    ],
+    "reranker_model": "BAAI/bge-reranker-v2-m3",
+    "rrf_k": 60,
+    "sentence_transformers_version": "6.1.0",
+    "sparse_top_k": 20
+  },
+  "corpus_size": 47,
+  "query_count": 27,
+  "strategies": {
+    "bm25": {
+      "mrr_at_10": 0.7024691358024691,
+      "per_query": [
+        {
+          "query_id": "q_fpt_eps_2025_vi",
+          "question": "EPS của FPT năm 2025 là bao nhiêu?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_fpt_eps_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_fpt_eps_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_fpt_eps_2025_01",
+            "bench_fpt_overseas_2025_01",
+            "bench_fpt_eps_2024_01",
+            "bench_vcb_credit_growth_2025_01",
+            "bench_vcb_nim_2024_01",
+            "bench_ssi_brokerage_share_2024_01",
+            "bench_vnm_gross_margin_2024_01",
+            "bench_fpt_revenue_2024_01",
+            "bench_hpg_steel_sales_2024_01",
+            "bench_mwg_net_profit_2024_01"
+          ]
+        },
+        {
+          "query_id": "q_fpt_eps_2024_en",
+          "question": "What was FPT earnings per share in FY2024?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_fpt_eps_2024_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_fpt_eps_2024_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_fpt_eps_2024_01",
+            "bench_ssi_brokerage_share_2025_01",
+            "bench_hpg_gross_margin_2024_01",
+            "bench_fpt_pbt_2025_01",
+            "bench_ssi_revenue_2024_01",
+            "bench_hpg_net_profit_2025_01",
+            "bench_vcb_nim_2025_01",
+            "bench_fpt_revenue_2024_01",
+            "bench_vnm_revenue_2024_01",
+            "bench_vnm_gross_margin_2024_01"
+          ]
+        },
+        {
+          "query_id": "q_fpt_revenue_2025_vi",
+          "question": "Doanh thu hợp nhất FPT năm 2025 đạt mức nào?",
+          "recall_at_10": 0.0,
+          "recall_at_5": 0.0,
+          "reciprocal_rank_at_10": 0.0,
+          "relevant_chunk_ids": [
+            "bench_fpt_revenue_2025_01"
+          ],
+          "relevant_hits": [],
+          "retrieved_chunk_ids": [
+            "bench_fpt_technology_2025_01",
+            "bench_fpt_revenue_2024_01",
+            "bench_mwg_online_share_2025_01",
+            "bench_fpt_q1_revenue_2025_01",
+            "bench_ssi_revenue_2025_01",
+            "bench_vnm_revenue_2025_01",
+            "bench_mwg_revenue_2024_01",
+            "bench_hpg_revenue_2024_01",
+            "bench_fpt_overseas_2025_01",
+            "bench_vcb_nii_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_fpt_sales_2024_en",
+          "question": "What were FPT sales in FY2024?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 0.3333333333333333,
+          "relevant_chunk_ids": [
+            "bench_fpt_revenue_2024_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_fpt_revenue_2024_01",
+              "rank": 3
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_mwg_online_share_2024_01",
+            "bench_ssi_revenue_2024_01",
+            "bench_fpt_revenue_2024_01",
+            "bench_hpg_gross_margin_2024_01",
+            "bench_fpt_pbt_2025_01",
+            "bench_vnm_revenue_2024_01",
+            "bench_vnm_gross_margin_2024_01",
+            "bench_vnm_gross_margin_2025_01",
+            "bench_hpg_revenue_2025_01",
+            "bench_hpg_net_profit_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_fpt_pbt_2025_mixed",
+          "question": "LNTT / profit before tax của FPT FY2025 là bao nhiêu?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_fpt_pbt_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_fpt_pbt_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_fpt_pbt_2025_01",
+            "bench_fpt_q1_pbt_2025_01",
+            "bench_vcb_pbt_2025_01",
+            "bench_fpt_pbt_2024_01",
+            "bench_vnm_gross_margin_2025_01",
+            "bench_hpg_net_profit_2025_01",
+            "bench_mwg_net_profit_2025_01",
+            "bench_fpt_overseas_2025_01",
+            "bench_vnm_gross_margin_2024_01",
+            "bench_vcb_nim_2024_01"
+          ]
+        },
+        {
+          "query_id": "q_fpt_technology_share_2025_vi",
+          "question": "Khối Công nghệ đóng góp bao nhiêu phần trăm doanh thu FPT năm 2025?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_fpt_technology_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_fpt_technology_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_fpt_technology_2025_01",
+            "bench_vnm_domestic_mix_2025_01",
+            "bench_ssi_brokerage_share_2024_01",
+            "bench_fpt_overseas_2025_01",
+            "bench_fpt_q1_revenue_2025_01",
+            "bench_fpt_revenue_2024_01",
+            "bench_mwg_online_share_2025_01",
+            "bench_vnm_revenue_2025_01",
+            "bench_ssi_revenue_2025_01",
+            "bench_mwg_bhx_growth_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_fpt_q1_revenue_growth_2025_vi",
+          "question": "Tăng trưởng doanh thu FPT quý 1 năm 2025 là bao nhiêu?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_fpt_q1_revenue_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_fpt_q1_revenue_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_fpt_q1_revenue_2025_01",
+            "bench_mwg_bhx_growth_2025_01",
+            "bench_vcb_credit_growth_2025_01",
+            "bench_fpt_overseas_2025_01",
+            "bench_fpt_revenue_2024_01",
+            "bench_hpg_gross_margin_2025_01",
+            "bench_vnm_revenue_2025_01",
+            "bench_fpt_technology_2025_01",
+            "bench_mwg_online_share_2025_01",
+            "bench_fpt_eps_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_vnm_gross_margin_2025_vi",
+          "question": "Biên lợi nhuận gộp VNM năm 2025 là bao nhiêu?",
+          "recall_at_10": 0.0,
+          "recall_at_5": 0.0,
+          "reciprocal_rank_at_10": 0.0,
+          "relevant_chunk_ids": [
+            "bench_vnm_gross_margin_2025_01"
+          ],
+          "relevant_hits": [],
+          "retrieved_chunk_ids": [
+            "bench_vnm_gross_margin_2024_01",
+            "bench_hpg_gross_margin_2025_01",
+            "bench_mwg_net_profit_2024_01",
+            "bench_vnm_net_profit_2024_01",
+            "bench_vcb_nim_2024_01",
+            "bench_ssi_pbt_2025_01",
+            "bench_vcb_pbt_2024_01",
+            "bench_fpt_pbt_2024_01",
+            "bench_hpg_net_profit_2024_01",
+            "bench_vnm_revenue_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_vnm_sales_2025_en",
+          "question": "What were Vinamilk full-year sales in 2025?",
+          "recall_at_10": 0.0,
+          "recall_at_5": 0.0,
+          "reciprocal_rank_at_10": 0.0,
+          "relevant_chunk_ids": [
+            "bench_vnm_revenue_2025_01"
+          ],
+          "relevant_hits": [],
+          "retrieved_chunk_ids": [
+            "bench_mwg_online_share_2024_01",
+            "bench_fpt_pbt_2025_01",
+            "bench_vnm_revenue_2024_01",
+            "bench_vnm_q1_revenue_2025_01",
+            "bench_fpt_revenue_2025_01",
+            "bench_vcb_npl_2024_01",
+            "bench_ssi_brokerage_share_2025_01",
+            "bench_vnm_gross_margin_2025_01",
+            "bench_hpg_revenue_2025_01",
+            "bench_hpg_net_profit_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_vnm_net_profit_2024_vi",
+          "question": "Lợi nhuận ròng của VNM năm 2024 đạt bao nhiêu?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_vnm_net_profit_2024_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_vnm_net_profit_2024_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_vnm_net_profit_2024_01",
+            "bench_vcb_nim_2024_01",
+            "bench_vnm_gross_margin_2024_01",
+            "bench_vcb_pbt_2024_01",
+            "bench_fpt_pbt_2024_01",
+            "bench_ssi_pbt_2025_01",
+            "bench_mwg_net_profit_2024_01",
+            "bench_hpg_net_profit_2024_01",
+            "bench_hpg_gross_margin_2025_01",
+            "bench_vnm_revenue_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_vnm_q1_growth_2025_en",
+          "question": "How fast did VNM revenue grow in Q1 2025?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_vnm_q1_revenue_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_vnm_q1_revenue_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_vnm_q1_revenue_2025_01",
+            "bench_fpt_q1_pbt_2025_01",
+            "bench_vnm_revenue_2024_01",
+            "bench_hpg_revenue_2025_01",
+            "bench_mwg_online_share_2024_01",
+            "bench_vnm_gross_margin_2025_01",
+            "bench_ssi_revenue_2024_01",
+            "bench_vnm_net_profit_2025_01",
+            "bench_mwg_revenue_2025_01",
+            "bench_vnm_revenue_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_hpg_revenue_2025_vi",
+          "question": "Doanh thu HPG năm 2025 là bao nhiêu?",
+          "recall_at_10": 0.0,
+          "recall_at_5": 0.0,
+          "reciprocal_rank_at_10": 0.0,
+          "relevant_chunk_ids": [
+            "bench_hpg_revenue_2025_01"
+          ],
+          "relevant_hits": [],
+          "retrieved_chunk_ids": [
+            "bench_hpg_revenue_2024_01",
+            "bench_fpt_overseas_2025_01",
+            "bench_hpg_steel_sales_2024_01",
+            "bench_fpt_revenue_2024_01",
+            "bench_mwg_online_share_2025_01",
+            "bench_fpt_technology_2025_01",
+            "bench_vnm_revenue_2025_01",
+            "bench_ssi_revenue_2025_01",
+            "bench_mwg_bhx_growth_2025_01",
+            "bench_mwg_revenue_2024_01"
+          ]
+        },
+        {
+          "query_id": "q_hpg_steel_volume_2025_en",
+          "question": "How many tonnes of steel did HPG sell in 2025?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_hpg_steel_sales_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_hpg_steel_sales_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_hpg_steel_sales_2025_01",
+            "bench_mwg_online_share_2024_01",
+            "bench_ssi_revenue_2024_01",
+            "bench_vcb_nii_2024_01",
+            "bench_hpg_revenue_2025_01",
+            "bench_hpg_net_profit_2025_01",
+            "bench_vnm_revenue_2024_01",
+            "bench_hpg_gross_margin_2025_01",
+            "bench_hpg_gross_margin_2024_01",
+            "bench_vcb_npl_2024_01"
+          ]
+        },
+        {
+          "query_id": "q_hpg_gross_margin_2024_en",
+          "question": "What was HPG gross margin in FY2024?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_hpg_gross_margin_2024_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_hpg_gross_margin_2024_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_hpg_gross_margin_2024_01",
+            "bench_vnm_gross_margin_2025_01",
+            "bench_vcb_nim_2025_01",
+            "bench_hpg_net_profit_2025_01",
+            "bench_ssi_revenue_2024_01",
+            "bench_hpg_revenue_2025_01",
+            "bench_fpt_pbt_2025_01",
+            "bench_vnm_revenue_2024_01",
+            "bench_vnm_gross_margin_2024_01",
+            "bench_vnm_net_profit_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_hpg_net_profit_2025_vi",
+          "question": "Lợi nhuận sau thuế Hòa Phát năm 2025 đạt mức nào?",
+          "recall_at_10": 0.0,
+          "recall_at_5": 0.0,
+          "reciprocal_rank_at_10": 0.0,
+          "relevant_chunk_ids": [
+            "bench_hpg_net_profit_2025_01"
+          ],
+          "relevant_hits": [],
+          "retrieved_chunk_ids": [
+            "bench_vnm_net_profit_2024_01",
+            "bench_hpg_revenue_2024_01",
+            "bench_mwg_net_profit_2024_01",
+            "bench_hpg_net_profit_2024_01",
+            "bench_ssi_pbt_2025_01",
+            "bench_vcb_pbt_2024_01",
+            "bench_fpt_pbt_2024_01",
+            "bench_hpg_gross_margin_2025_01",
+            "bench_vnm_gross_margin_2024_01",
+            "bench_vnm_revenue_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_mwg_online_share_2025_en",
+          "question": "What share of MWG sales came from online channels in 2025?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 0.0,
+          "reciprocal_rank_at_10": 0.1,
+          "relevant_chunk_ids": [
+            "bench_mwg_online_share_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_mwg_online_share_2025_01",
+              "rank": 10
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_mwg_online_share_2024_01",
+            "bench_ssi_brokerage_share_2025_01",
+            "bench_fpt_eps_2024_01",
+            "bench_ssi_revenue_2024_01",
+            "bench_mwg_net_profit_2025_01",
+            "bench_vcb_nii_2024_01",
+            "bench_hpg_steel_sales_2025_01",
+            "bench_vnm_revenue_2024_01",
+            "bench_mwg_bhx_growth_2025_01",
+            "bench_mwg_online_share_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_mwg_revenue_2024_vi",
+          "question": "Doanh thu thuần MWG năm 2024 là bao nhiêu?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_mwg_revenue_2024_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_mwg_revenue_2024_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_mwg_revenue_2024_01",
+            "bench_mwg_online_share_2025_01",
+            "bench_vcb_nii_2025_01",
+            "bench_mwg_net_profit_2024_01",
+            "bench_mwg_bhx_growth_2025_01",
+            "bench_fpt_revenue_2024_01",
+            "bench_fpt_overseas_2025_01",
+            "bench_vnm_revenue_2025_01",
+            "bench_hpg_revenue_2024_01",
+            "bench_fpt_technology_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_mwg_bhx_growth_2025_vi",
+          "question": "Doanh thu Bách Hóa Xanh tăng trưởng thế nào trong năm 2025?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_mwg_bhx_growth_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_mwg_bhx_growth_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_mwg_bhx_growth_2025_01",
+            "bench_vcb_credit_growth_2025_01",
+            "bench_fpt_q1_revenue_2025_01",
+            "bench_mwg_revenue_2024_01",
+            "bench_hpg_revenue_2024_01",
+            "bench_vnm_revenue_2025_01",
+            "bench_fpt_overseas_2025_01",
+            "bench_fpt_revenue_2024_01",
+            "bench_mwg_online_share_2025_01",
+            "bench_fpt_technology_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_mwg_net_profit_2025_en",
+          "question": "What was Mobile World net profit for FY2025?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 0.2,
+          "relevant_chunk_ids": [
+            "bench_mwg_net_profit_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_mwg_net_profit_2025_01",
+              "rank": 5
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_mwg_revenue_2025_01",
+            "bench_vnm_net_profit_2025_01",
+            "bench_hpg_net_profit_2025_01",
+            "bench_vcb_nim_2025_01",
+            "bench_mwg_net_profit_2025_01",
+            "bench_fpt_pbt_2025_01",
+            "bench_hpg_gross_margin_2024_01",
+            "bench_vcb_pbt_2025_01",
+            "bench_fpt_eps_2024_01",
+            "bench_vnm_gross_margin_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_vcb_nim_2025_mixed",
+          "question": "NIM (net interest margin) của VCB năm 2025 là bao nhiêu?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_vcb_nim_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_vcb_nim_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_vcb_nim_2025_01",
+            "bench_vcb_nim_2024_01",
+            "bench_vcb_nii_2024_01",
+            "bench_vcb_credit_growth_2025_01",
+            "bench_vcb_npl_2025_01",
+            "bench_ssi_brokerage_share_2024_01",
+            "bench_fpt_overseas_2025_01",
+            "bench_vnm_gross_margin_2024_01",
+            "bench_hpg_gross_margin_2024_01",
+            "bench_vnm_gross_margin_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_vcb_bad_loan_ratio_2024_en",
+          "question": "What was VCB's bad-loan ratio at year-end 2024?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_vcb_npl_2024_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_vcb_npl_2024_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_vcb_npl_2024_01",
+            "bench_hpg_gross_margin_2024_01",
+            "bench_vnm_q1_revenue_2025_01",
+            "bench_fpt_pbt_2025_01",
+            "bench_vcb_nim_2025_01",
+            "bench_fpt_revenue_2025_01",
+            "bench_fpt_eps_2024_01",
+            "bench_vcb_nim_2024_01",
+            "bench_vcb_pbt_2024_01",
+            "bench_vcb_nii_2024_01"
+          ]
+        },
+        {
+          "query_id": "q_vcb_pbt_2025_en",
+          "question": "How much profit before tax did Vietcombank report in 2025?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_vcb_pbt_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_vcb_pbt_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_vcb_pbt_2025_01",
+            "bench_fpt_pbt_2025_01",
+            "bench_fpt_q1_pbt_2025_01",
+            "bench_vcb_nii_2024_01",
+            "bench_vnm_gross_margin_2025_01",
+            "bench_hpg_net_profit_2025_01",
+            "bench_mwg_net_profit_2025_01",
+            "bench_vnm_net_profit_2025_01",
+            "bench_ssi_brokerage_share_2025_01",
+            "bench_hpg_revenue_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_vcb_credit_growth_2025_vi",
+          "question": "Tăng trưởng tín dụng VCB năm 2025 là bao nhiêu phần trăm?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_vcb_credit_growth_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_vcb_credit_growth_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_vcb_credit_growth_2025_01",
+            "bench_ssi_brokerage_share_2024_01",
+            "bench_mwg_bhx_growth_2025_01",
+            "bench_fpt_q1_revenue_2025_01",
+            "bench_vcb_nim_2024_01",
+            "bench_fpt_overseas_2025_01",
+            "bench_fpt_revenue_2024_01",
+            "bench_hpg_gross_margin_2025_01",
+            "bench_vnm_revenue_2025_01",
+            "bench_vcb_nii_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_ssi_brokerage_share_2025_en",
+          "question": "What was SSI equity brokerage market share in 2025?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_ssi_brokerage_share_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_ssi_brokerage_share_2025_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_ssi_brokerage_share_2025_01",
+            "bench_fpt_eps_2024_01",
+            "bench_ssi_revenue_2024_01",
+            "bench_hpg_net_profit_2025_01",
+            "bench_vcb_nim_2025_01",
+            "bench_fpt_pbt_2025_01",
+            "bench_ssi_pbt_2025_01",
+            "bench_ssi_revenue_2025_01",
+            "bench_vnm_net_profit_2025_01",
+            "bench_ssi_brokerage_share_2024_01"
+          ]
+        },
+        {
+          "query_id": "q_ssi_revenue_2024_en",
+          "question": "What total operating revenue did SSI record in FY2024?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_ssi_revenue_2024_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_ssi_revenue_2024_01",
+              "rank": 1
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_ssi_revenue_2024_01",
+            "bench_vnm_revenue_2024_01",
+            "bench_ssi_brokerage_share_2025_01",
+            "bench_hpg_revenue_2025_01",
+            "bench_mwg_online_share_2024_01",
+            "bench_hpg_gross_margin_2024_01",
+            "bench_vnm_gross_margin_2024_01",
+            "bench_ssi_pbt_2025_01",
+            "bench_ssi_revenue_2025_01",
+            "bench_ssi_brokerage_share_2024_01"
+          ]
+        },
+        {
+          "query_id": "q_fpt_revenue_and_pbt_2025_mixed",
+          "question": "FPT FY2025 revenue và profit before tax là bao nhiêu?",
+          "recall_at_10": 1.0,
+          "recall_at_5": 1.0,
+          "reciprocal_rank_at_10": 1.0,
+          "relevant_chunk_ids": [
+            "bench_fpt_revenue_2025_01",
+            "bench_fpt_pbt_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_fpt_pbt_2025_01",
+              "rank": 1
+            },
+            {
+              "chunk_id": "bench_fpt_revenue_2025_01",
+              "rank": 4
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_fpt_pbt_2025_01",
+            "bench_fpt_q1_pbt_2025_01",
+            "bench_vcb_pbt_2025_01",
+            "bench_fpt_revenue_2025_01",
+            "bench_fpt_q1_revenue_2025_01",
+            "bench_vnm_gross_margin_2025_01",
+            "bench_hpg_revenue_2025_01",
+            "bench_hpg_net_profit_2025_01",
+            "bench_mwg_revenue_2025_01",
+            "bench_mwg_net_profit_2025_01"
+          ]
+        },
+        {
+          "query_id": "q_vnm_hpg_gross_margin_2025_en",
+          "question": "Compare the 2025 gross margins reported for VNM and HPG.",
+          "recall_at_10": 1.0,
+          "recall_at_5": 0.5,
+          "reciprocal_rank_at_10": 0.3333333333333333,
+          "relevant_chunk_ids": [
+            "bench_vnm_gross_margin_2025_01",
+            "bench_hpg_gross_margin_2025_01"
+          ],
+          "relevant_hits": [
+            {
+              "chunk_id": "bench_vnm_gross_margin_2025_01",
+              "rank": 3
+            },
+            {
+              "chunk_id": "bench_hpg_gross_margin_2025_01",
+              "rank": 9
+            }
+          ],
+          "retrieved_chunk_ids": [
+            "bench_hpg_gross_margin_2024_01",
+            "bench_vnm_revenue_2024_01",
+            "bench_vnm_gross_margin_2025_01",
+            "bench_vnm_net_profit_2025_01",
+            "bench_vcb_npl_2024_01",
+            "bench_vcb_pbt_2025_01",
+            "bench_fpt_eps_2024_01",
+            "bench_hpg_steel_sales_2025_01",
+            "bench_hpg_gross_margin_2025_01",
+            "bench_fpt_revenue_2025_01"
+          ]
+        }
+      ],
+      "query_count": 27,
+      "recall_at_10": 0.8148148148148148,
+      "recall_at_5": 0.7592592592592593,
+      "strategy": "bm25"
+    }
+  },
+  "unmeasured": {
+    "dense": "local model snapshot unavailable for 'sentence-transformers/all-MiniLM-L6-v2'; download it explicitly before running this strategy",
+    "hybrid_rrf": "local model snapshot unavailable for 'sentence-transformers/all-MiniLM-L6-v2'; download it explicitly before running this strategy",
+    "hybrid_rrf_reranked": "local model snapshot unavailable for 'sentence-transformers/all-MiniLM-L6-v2'; download it explicitly before running this strategy; local model snapshot unavailable for 'BAAI/bge-reranker-v2-m3'; download it explicitly before running this strategy"
+  }
+}

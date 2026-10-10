@@ -12,6 +12,7 @@ import pytest
 import finrag
 import finrag.config
 import finrag.domain
+import finrag.evaluation
 import finrag.models
 import finrag.providers
 import finrag.retrieval
@@ -46,6 +47,11 @@ import finrag.verification
             "finrag.retrieval",
             Path(finrag.retrieval.__file__).parent,
             ("finrag.retrieval", "finrag.domain", "rank_bm25"),
+        ),
+        (
+            "finrag.evaluation",
+            Path(finrag.evaluation.__file__).parent,
+            ("finrag.evaluation", "finrag.domain", "finrag.retrieval"),
         ),
     ],
 )
@@ -293,6 +299,46 @@ print('retrieval imports are lazy')
         timeout=30,
     )
     assert result.stdout.strip() == "retrieval imports are lazy"
+
+
+def test_evaluation_imports_do_not_load_application_or_model_runtime(tmp_path: Path) -> None:
+    script = """
+import importlib
+import importlib.abc
+import socket
+import sys
+
+attempts = []
+class BlockRuntime(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.')[0] in {
+            'app', 'langchain', 'langchain_core', 'qdrant_client',
+            'sentence_transformers', 'transformers', 'torch',
+        }:
+            attempts.append(fullname)
+            raise AssertionError('runtime imported during evaluation import')
+
+def block_network(*args, **kwargs):
+    attempts.append('network')
+    raise AssertionError('network attempted during evaluation import')
+
+sys.meta_path.insert(0, BlockRuntime())
+socket.socket.connect = block_network
+socket.socket.connect_ex = block_network
+socket.create_connection = block_network
+import finrag.evaluation
+assert not attempts, attempts
+print('evaluation imports are isolated')
+"""
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", script],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    assert result.stdout.strip() == "evaluation imports are isolated"
 
 
 def test_installed_package_and_new_settings_have_no_deprecation_warnings(tmp_path: Path) -> None:

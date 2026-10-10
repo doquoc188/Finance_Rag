@@ -13,6 +13,9 @@
 - `src/finrag/retrieval/`: typed synchronous retrieval/reranking contracts, in-memory
   BM25, hybrid composition, pure RRF, and lazy local reranker adapters; no FastAPI,
   LangGraph, provider, or legacy `app` imports.
+- `src/finrag/evaluation/`: retrieval benchmark values, validation, metric math, runner,
+  and deterministic reporting; may consume domain/retrieval contracts, never application,
+  provider, model, API, LangGraph, or external-service code.
 - `src/finrag/providers/`: explicit instance-owned chat factory registry; may import config
   contracts and LangChain Core, never legacy `app`. Import concrete integrations lazily
   inside their adapter factories; keep credentials out of general settings/domain.
@@ -101,6 +104,9 @@
 - Evaluate retrieval and answer quality separately with versioned datasets/configs.
   Keep tuning data separate from held-out evaluation; report provider/model versions,
   sample counts, commands, and artifacts. Smoke tests are not quality benchmarks.
+- Retrieval benchmark gold IDs must be explicit human judgments independent of the system
+  under test. Keep test-fake results separate from actual implementation measurements;
+  missing local models are NOT MEASURED, never substituted. Do not tune on the baseline.
 
 ## Documentation and security
 - Describe implemented behavior and limitations. Never invent benchmark numbers,
