@@ -70,7 +70,7 @@ caller-owned factories control instance sharing/lifetime. The legacy application
 uses its existing construction path. See the
 [role-composition report](phase-1.1e-baseline.md) for behavior and verification.
 
-## Current graph runtime (Phase 1.1F)
+## Current graph runtime (Phases 1.1F / 1.2A)
 
 The Phase 1.1A–E paragraphs above describe those historical increments. The real
 application now consumes their contracts:
@@ -91,10 +91,10 @@ on that application instance. Chat requests reuse its graph/models; a separate a
 separate composition. There is no import-time graph, model cache, or global registry.
 Lifespan shutdown releases the app's runtime reference; no new SDK close contract is added.
 
-| Graph node | Model role | Existing model interface |
+| Graph node | Model role | Model interface |
 | --- | --- | --- |
 | generate | generation | ChatPromptTemplate pipe, message content |
-| grade_documents | grading | with_structured_output(GradeDocuments), invoke(document text) |
+| grade_documents | grading | prompt with question + candidate, with_structured_output(GradeDocuments) |
 | transform_query | query_rewrite | invoke("Rewrite query: ...") |
 
 retrieve, web_search, and fact_check use no chat model. fact_check retains its existing
@@ -134,9 +134,48 @@ tracebacks; only existing adapter outer messages are credential-safe. Existing A
 and health disclosure debt is not redesigned here.
 
 Implemented: runtime model-role injection, explicit instance ownership, and offline
-compiled graph/composition/startup tests. Still pending: RAG correctness, true hybrid
-retrieval, GraphRAG, and evaluation expansion. See the
+compiled graph/composition/startup tests, plus the input corrections described below.
+Still pending: numeric verification, graph policy correctness, true hybrid retrieval,
+GraphRAG, and evaluation expansion. See the
 [Phase 1.1F report](phase-1.1f-baseline.md) for measured checks and deferred defects.
+
+## Grounded model inputs (Phase 1.2A)
+
+```text
+Question -> retrieval -> candidate documents -> question-aware grading
+  -> evidence context -> grounded generation
+```
+
+Generation is now evidence-grounded at prompt-input level: a system message instructs
+the model to answer from supplied evidence and acknowledge insufficiency; the user
+message contains separate EVIDENCE and QUESTION sections. Evidence is data, not
+instructions. `app/graph/context.py:serialize_evidence` numbers documents in their
+existing order and includes available scalar source/page/company/year/has_table
+metadata in fixed order, followed by verbatim content. Missing/complex metadata is
+omitted, without invented filenames/pages or Python object representations. Financial
+number formatting, percentages, currency labels, units, and line breaks are preserved.
+The existing citation list/output extraction remain; no citation parser/verifier is added.
+
+If there are no documents or every document's text is blank, generation returns
+"Không đủ bằng chứng từ tài liệu được cung cấp để trả lời câu hỏi này." with empty
+citations, without invoking the model or requesting more evidence. Metadata alone
+is not evidence. For nonempty but insufficient evidence, the prompt instructs the model
+to acknowledge that limit; model obedience is not established by offline fixtures.
+
+Document grading now receives explicit QUESTION and CANDIDATE DOCUMENT sections,
+with instructions to judge relevance to answering that question. The GradeDocuments
+structured schema and grading role are unchanged. Generation/rewrite roles, state,
+graph edges, retrieval, retry policy, and numeric fact-check logic are unchanged.
+The existing grading heuristic on errors and retention of original documents when
+all are rejected remain graph-policy debt for Phase 1.2C. Existing mock retrieval/web
+placeholders can still become context; prompt delivery does not validate their provenance.
+
+Recording tests inspect actual message text and structured schema use. The real
+compiled graph proves retrieved documents reach the generation request and grading
+receives question + candidate, using distinct offline role models. This verifies input
+grounding, not financial accuracy, hallucination elimination, or citation correctness.
+Numeric verification remains Phase 1.2B; hybrid retrieval remains pending. See the
+[Phase 1.2A report](phase-1.2a-baseline.md) for tests, commands, and remaining limitations.
 
 ## Python and installation
 
@@ -250,9 +289,9 @@ These are observations, not fixes or acceptance claims:
 - `app/api/routes.py` accepts company/year but does not pass them into chat retrieval.
   Indexing replaces the current documents and sets `force_recreate=True`; stable IDs,
   incremental updates, concurrency isolation, and idempotent ingestion are absent.
-- `app/graph/nodes.py` builds context but its generation prompt contains only the
-  question. Document grading does not include the question. The numeric guard logs
-  unmatched numbers but always returns no hallucination and a useful answer.
+- Phase 1.2A supplies context to generation and question + document to grading.
+  The numeric guard still logs unmatched numbers but always returns no hallucination
+  and a useful answer; prompt grounding does not establish financial correctness.
 - Phase 1.0.2 deletes `SimpleFakeLLM` and the other canned chat-answer fallbacks.
   Constant embedding fallback, mock retrieval evidence, heuristic grading, and web
   placeholders remain separate retrieval/workflow debt; they are not model-quality evidence.

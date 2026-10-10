@@ -115,10 +115,18 @@ def test_real_compiled_graph_routes_distinct_roles(
     assert result["is_relevant"] == score
     assert result["is_hallucinated"] == "no"
     assert result["is_useful"] == "yes"
-    assert generation.calls == [ModelCall("generation", result["question"])]
-    assert grading.calls == [
-        ModelCall("grading", result["documents"][0].page_content, GradeDocuments)
-    ]
+    assert len(generation.calls) == len(grading.calls) == 1
+    generation_call, grading_call = generation.calls[0], grading.calls[0]
+    assert generation_call.role == "generation" and generation_call.schema is None
+    assert f"QUESTION:\n{result['question']}" in generation_call.input
+    for index, document in enumerate(result["documents"], start=1):
+        assert f"[SOURCE {index}]" in generation_call.input
+        assert document.page_content in generation_call.input
+        assert f"source: {document.metadata['source']}" in generation_call.input
+        assert f"page: {document.metadata['page']}" in generation_call.input
+    assert grading_call.role == "grading" and grading_call.schema is GradeDocuments
+    assert f"QUESTION:\n{result['question']}" in grading_call.input
+    assert f"CANDIDATE DOCUMENT:\n{result['documents'][0].page_content}" in grading_call.input
 
     if score == "no" and retry_count < 2:
         assert rewrite.calls == [ModelCall("query_rewrite", "Rewrite query: Doanh thu FPT?")]

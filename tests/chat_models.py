@@ -43,7 +43,12 @@ class WorkflowChatModel(FakeListChatModel):
             raise NotImplementedError("The test model supports Pydantic schemas only")
 
         def grade(value: LanguageModelInput) -> dict[str, Any] | BaseModel:
-            self.calls.append(ModelCall(self.role, str(value), schema))
+            messages = self._convert_input(value).to_messages()
+            self.calls.append(
+                ModelCall(
+                    self.role, "\n".join(str(message.content) for message in messages), schema
+                )
+            )
             return schema.model_validate({"binary_score": self.binary_score, "is_useful": "yes"})
 
         return RunnableLambda(grade)
