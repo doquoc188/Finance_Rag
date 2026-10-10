@@ -1,8 +1,8 @@
 # Development foundation and runtime composition
 
-This phase adds engineering contracts and tooling. Application modules, existing test
-assertions, provider defaults, and the legacy runtime installation path are preserved.
-It does not implement a retrieval refactor, GraphRAG, or numeric-validation improvements.
+Phase 1.0 added engineering contracts and tooling while preserving application modules,
+existing test assertions, provider defaults, and the legacy runtime installation path.
+Later increments below document the current composition and numeric-verification behavior.
 
 Phase 1.0.1 adds an explicit compatible chat-model fixture for workflow tests and
 strengthens their assertions. Application source remains unchanged. See the
@@ -70,7 +70,7 @@ caller-owned factories control instance sharing/lifetime. The legacy application
 uses its existing construction path. See the
 [role-composition report](phase-1.1e-baseline.md) for behavior and verification.
 
-## Current graph runtime (Phases 1.1F / 1.2A)
+## Current graph runtime (Phases 1.1F / 1.2A / 1.2B)
 
 The Phase 1.1A–E paragraphs above describe those historical increments. The real
 application now consumes their contracts:
@@ -97,8 +97,8 @@ Lifespan shutdown releases the app's runtime reference; no new SDK close contrac
 | grade_documents | grading | prompt with question + candidate, with_structured_output(GradeDocuments) |
 | transform_query | query_rewrite | invoke("Rewrite query: ...") |
 
-retrieve, web_search, and fact_check use no chat model. fact_check retains its existing
-numeric notice logic; the unused GradeHallucination schema is not an implemented LLM
+retrieve, web_search, and fact_check use no chat model. fact_check uses the deterministic
+numeric verifier described below; the unused GradeHallucination schema is not an implemented LLM
 grader. Node factories accept only BaseChatModel. Graph construction imports no settings
 or provider adapters. The existing graph-engine fallback also uses the supplied models;
 it never resolves a replacement provider. Startup composition errors propagate before
@@ -135,7 +135,7 @@ and health disclosure debt is not redesigned here.
 
 Implemented: runtime model-role injection, explicit instance ownership, and offline
 compiled graph/composition/startup tests, plus the input corrections described below.
-Still pending: numeric verification, graph policy correctness, true hybrid retrieval,
+Still pending: derived financial calculations, graph policy correctness, true hybrid retrieval,
 GraphRAG, and evaluation expansion. See the
 [Phase 1.1F report](phase-1.1f-baseline.md) for measured checks and deferred defects.
 
@@ -165,7 +165,8 @@ to acknowledge that limit; model obedience is not established by offline fixture
 Document grading now receives explicit QUESTION and CANDIDATE DOCUMENT sections,
 with instructions to judge relevance to answering that question. The GradeDocuments
 structured schema and grading role are unchanged. Generation/rewrite roles, state,
-graph edges, retrieval, retry policy, and numeric fact-check logic are unchanged.
+graph edges, retrieval, and retry policy are unchanged. Phase 1.2B adds the numeric
+verification described below.
 The existing grading heuristic on errors and retention of original documents when
 all are rejected remain graph-policy debt for Phase 1.2C. Existing mock retrieval/web
 placeholders can still become context; prompt delivery does not validate their provenance.
@@ -174,8 +175,70 @@ Recording tests inspect actual message text and structured schema use. The real
 compiled graph proves retrieved documents reach the generation request and grading
 receives question + candidate, using distinct offline role models. This verifies input
 grounding, not financial accuracy, hallucination elimination, or citation correctness.
-Numeric verification remains Phase 1.2B; hybrid retrieval remains pending. See the
+Hybrid retrieval remains pending. See the
 [Phase 1.2A report](phase-1.2a-baseline.md) for tests, commands, and remaining limitations.
+
+## Explicit numeric verification (Phase 1.2B)
+
+```text
+Generated answer + retrieved document text
+  -> deterministic Decimal numeric verifier
+  -> ordered SUPPORTED / CONTRADICTED / NOT_FOUND report
+```
+
+`finrag.verification` uses only the standard library. `extract_numeric_mentions(text)`
+returns immutable raw/Decimal/type/currency values; `verify_numeric_claims(answer,
+evidence_strings)` returns immutable claim/evidence/status entries in answer order.
+The fact_check node supplies the answer and each document's text; models, settings,
+providers, environment, network, eval/exec, and code interpretation are not involved.
+
+Supported syntax includes signed integers, dot decimals, validated comma thousands
+groups (`1,250`, `1,250.50`), one/two-digit comma decimals (`12,5%`), percentages,
+English thousand/million/billion/trillion, and Vietnamese nghìn/ngàn/triệu/tỷ.
+VND/VNĐ/đồng aliases normalize to VND; USD/$ normalize to USD. Prefix/suffix currency
+forms are supported. Known scales convert to base quantities with exact Decimal
+multiplication: 1.2 billion VND, 1,200 million VNĐ, and 1,200,000,000 VND are equivalent.
+Percentages remain percentage-point quantities distinct from plain numbers/money.
+Currency-less amounts do not inherit a currency; VND and USD cannot match. There is
+no FX conversion, numeric tolerance, rounding approximation, or derived arithmetic.
+
+Context matching is deliberately conservative: split sentences (retaining decimal
+dots) and clear conjunction/semicolon clauses, mask quantities, normalize case/accents,
+and remove a small explicit stopword set. Topic token sets and explicit year anchors
+must match exactly. Numeric type/currency must agree. Negation, company names, and
+quarter labels remain meaningful tokens. Ambiguous same-type quantities within one
+clause are not assigned to guessed topics. An unrelated employees/profit value cannot
+contradict a revenue claim. Bare equal values may support; bare unequal values cannot
+establish contradiction without a topic. Recognized year anchors must agree and are
+kept separate from plain financial quantities during comparison.
+
+SUPPORTED means compatible explicit quantities are exactly equal. CONTRADICTED means
+compatible topic/type/currency/period evidence contains a differing explicit value.
+NOT_FOUND means neither support nor a safe contradiction is established; it does not
+prove deliberate hallucination. If compatible sources both support and contradict,
+CONTRADICTED takes conservative precedence and the report retains both passages.
+Evidence indexes refer to the supplied document list; they are not verified citations.
+
+Graph state adds optional `numeric_verification`, a tuple of NumericVerification
+objects containing Decimal values. This report is available to Python graph/runtime
+callers. Existing HTTP/UI schemas are unchanged and do not expose the report yet.
+The legacy is_hallucinated flag is "yes" only for CONTRADICTED, not NOT_FOUND.
+Legacy is_useful is "no" if any extracted claim is unsupported/contradicted, otherwise
+"yes". An empty report preserves old "no"/"yes" flags for compatibility; those names
+are semantic debt and do not certify overall truth or usefulness. No retry/topology,
+generation/grading prompt, retrieval, provider, or model-role behavior changes.
+
+Limitations: this is lexical explicit-value screening, not semantic entailment or full
+hallucination detection. Paraphrases/synonyms and cross-language topics may yield
+NOT_FOUND. Units/company/period from separate table headers or metadata are not inferred.
+No percentage is computed from two revenue figures. Dot always means decimal, so
+Vietnamese dot thousands notation requires an explicit future locale contract; comma
+three-digit groups mean thousands rather than three-digit decimal fractions. Mixed
+European notation, malformed groups, scientific notation, compact dash ranges/slash
+dates, and accounting parentheses are not interpreted. Unsupported mentions can be
+omitted, so an empty report is not comprehensive coverage. Evidence itself may be
+incomplete/conflicting or come from existing mock/web placeholders. See the
+[Phase 1.2B report](phase-1.2b-baseline.md) for measured tests and remaining scope.
 
 ## Python and installation
 
@@ -290,8 +353,9 @@ These are observations, not fixes or acceptance claims:
   Indexing replaces the current documents and sets `force_recreate=True`; stable IDs,
   incremental updates, concurrency isolation, and idempotent ingestion are absent.
 - Phase 1.2A supplies context to generation and question + document to grading.
-  The numeric guard still logs unmatched numbers but always returns no hallucination
-  and a useful answer; prompt grounding does not establish financial correctness.
+  Phase 1.2B verifies explicit quantities deterministically with conservative lexical
+  context and tri-state results. Derived arithmetic, locale ambiguity, inferred table
+  units, provenance/citation checks, and general hallucination detection remain unresolved.
 - Phase 1.0.2 deletes `SimpleFakeLLM` and the other canned chat-answer fallbacks.
   Constant embedding fallback, mock retrieval evidence, heuristic grading, and web
   placeholders remain separate retrieval/workflow debt; they are not model-quality evidence.

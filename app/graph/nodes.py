@@ -5,6 +5,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import BaseModel, Field
 
 from app.core.errors import ProviderUnavailableError
+from finrag.verification import VerificationStatus, verify_numeric_claims
 
 try:
     from langchain_core.documents import Document
@@ -213,17 +214,21 @@ def grade_generation_node(state: FinGraphState) -> FinGraphUpdate:
     generation = state["generation"]
     docs = state["documents"]
 
-    import re
-
-    numbers_in_gen = set(re.findall(r"\d+(?:\.\d+)?", generation))
-    context_text = " ".join([d.page_content for d in docs])
-
-    is_hallucinated = "no"
-    for num in numbers_in_gen:
-        if len(num) >= 3 and num not in context_text:
-            print(f"[Fact-Check Notice] Number {num} checked against context.")
-
-    return {"is_hallucinated": is_hallucinated, "is_useful": "yes"}
+    results = verify_numeric_claims(generation, [document.page_content for document in docs])
+    # Legacy flags describe numeric screening only, not general hallucination/usefulness.
+    return {
+        "numeric_verification": results,
+        "is_hallucinated": (
+            "yes"
+            if any(result.status is VerificationStatus.CONTRADICTED for result in results)
+            else "no"
+        ),
+        "is_useful": (
+            "yes"
+            if all(result.status is VerificationStatus.SUPPORTED for result in results)
+            else "no"
+        ),
+    }
 
 
 def create_grade_documents_node(model: BaseChatModel) -> GraphNode:

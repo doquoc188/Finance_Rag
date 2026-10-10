@@ -14,12 +14,18 @@ import finrag.config
 import finrag.domain
 import finrag.models
 import finrag.providers
+import finrag.verification
 
 
 @pytest.mark.parametrize(
     ("package_name", "package_dir", "allowed_packages"),
     [
         ("finrag.domain", Path(finrag.domain.__file__).parent, ("finrag.domain",)),
+        (
+            "finrag.verification",
+            Path(finrag.verification.__file__).parent,
+            ("finrag.verification",),
+        ),
         (
             "finrag.config",
             Path(finrag.config.__file__).parent,
@@ -87,6 +93,7 @@ def test_graph_imports_resolved_models_without_provider_or_settings_dependencies
         "app.core.pdf_parser",
         "app.core.vectorstore",  # Existing embeddings/retrieval path is not migrated.
         "finrag.models",
+        "finrag.verification",
         "langchain_core",
         "langgraph",
         "pydantic",
@@ -109,6 +116,33 @@ def test_graph_imports_resolved_models_without_provider_or_settings_dependencies
                 assert node.func.id not in {"Settings", "get_llm", "resolve_model_roles"}
             if isinstance(node, ast.Attribute):
                 assert node.attr not in {"environ", "getenv"}
+
+
+def test_numeric_verification_imports_without_site_packages_or_code_execution(
+    tmp_path: Path,
+) -> None:
+    package_dir = Path(finrag.verification.__file__).parent
+    for path in package_dir.glob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                assert node.func.id not in {"eval", "exec"}
+    script = """
+import sys
+sys.path.insert(0, sys.argv[1])
+from finrag.verification import verify_numeric_claims, VerificationStatus
+result = verify_numeric_claims('Revenue was 50 VND.', ['Revenue was 50 VND.'])
+assert result[0].status is VerificationStatus.SUPPORTED
+print('stdlib-only verification passed')
+"""
+    result = subprocess.run(
+        [sys.executable, "-I", "-S", "-c", script, str(Path(finrag.__file__).parent.parent)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    assert result.stdout.strip() == "stdlib-only verification passed"
 
 
 def test_provider_imports_need_no_sdks_credentials_network_or_global_registry(

@@ -1,6 +1,8 @@
 from typing import Any, Dict, List, Optional
 
-from typing_extensions import TypedDict
+from typing_extensions import NotRequired, TypedDict
+
+from finrag.verification import NumericVerification
 
 try:
     from langchain_core.documents import Document
@@ -19,10 +21,11 @@ class FinGraphState(TypedDict):
     generation: str  # Final generated response text
     web_search_needed: bool  # Flag whether web search was triggered
     is_relevant: str  # "yes" or "no" (grade of documents)
-    is_hallucinated: str  # "yes" or "no" (grade of answer faithfulness)
-    is_useful: str  # "yes" or "no" (grade of answer usefulness)
+    is_hallucinated: str  # Legacy name: numeric contradiction, not general hallucination
+    is_useful: str  # Legacy name: numeric coverage, not a general usefulness grade
     retry_count: int  # Number of transform query retries (prevent infinite loops)
     citations: List[Dict[str, Any]]  # Structured citation metadata (File, Page, Company, Year)
+    numeric_verification: NotRequired[tuple[NumericVerification, ...]]
 
 
 class FinGraphUpdate(TypedDict, total=False):
@@ -38,3 +41,4 @@ class FinGraphUpdate(TypedDict, total=False):
     is_useful: str
     retry_count: int
     citations: list[dict[str, Any]]
+    numeric_verification: tuple[NumericVerification, ...]

@@ -16,6 +16,8 @@
   inside their adapter factories; keep credentials out of general settings/domain.
 - `src/finrag/models/`: explicit chat-role composition through a supplied registry;
   no environment reads, automatic registration, caches, or legacy runtime imports.
+- `src/finrag/verification/`: deterministic explicit-quantity checks with Decimal and
+  standard-library values only; no frameworks, providers, legacy app, FX, or derived math.
 - `app/api/`: HTTP validation, transport schemas, and service invocation.
 - `app/core/`: parsing, indexing/retrieval, and model access; no UI/HTTP dependencies.
 - `app/graph/`: LangGraph orchestration using explicitly supplied ModelRoles;
@@ -54,6 +56,9 @@
 - Tie numeric claims to source cells/passages. Missing evidence is not zero.
 - Test percentages, growth rates, unit conversions, and conflicting periods explicitly.
   An LLM grade or substring match alone does not establish numeric correctness.
+- Keep SUPPORTED / CONTRADICTED / NOT_FOUND distinct. Contradictions require compatible
+  topic, period, numeric type, and currency; unrelated numbers and missing evidence are
+  not contradictions. Legacy flags are limited numeric screening, not truth certificates.
 
 ## Indexing and idempotency
 - Future indexing changes must use stable document/chunk identities and versioned metadata.
