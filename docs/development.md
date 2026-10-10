@@ -8,6 +8,11 @@ Phase 1.0.1 adds an explicit compatible chat-model fixture for workflow tests an
 strengthens their assertions. Application source remains unchanged. See the
 [green test baseline](phase-1.0.1-baseline.md) for the current test results.
 
+Phase 1.0.2 removes production chat-model and canned-answer fallbacks. Missing model
+configuration or provider failures now raise explicit errors; successful provider
+selection and constructor arguments are preserved. See the
+[Phase 1.0.2 report](phase-1.0.2-baseline.md) for failure semantics and current results.
+
 ## Python and installation
 
 Use Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
@@ -105,10 +110,9 @@ These are observations, not fixes or acceptance claims:
 - `app/graph/nodes.py` builds context but its generation prompt contains only the
   question. Document grading does not include the question. The numeric guard logs
   unmatched numbers but always returns no hallucination and a useful answer.
-- `SimpleFakeLLM` is not a LangChain Runnable; composing it with a real prompt template
-  can fail. Phase 1.0.1 isolates workflow tests from that runtime defect; it does not
-  change or certify the application fallback. Broad catches and mock/dummy outputs can conceal unavailable dependencies
-  or providers. Fixed sample answers are not evidence-grounded general answers.
+- Phase 1.0.2 deletes `SimpleFakeLLM` and the other canned chat-answer fallbacks.
+  Constant embedding fallback, mock retrieval evidence, heuristic grading, and web
+  placeholders remain separate retrieval/workflow debt; they are not model-quality evidence.
 - LangGraph does not loop back after fact checking. GraphRAG is not implemented.
 - PDF failure falls back to decoding bytes as text, not pypdf. Zero-valued table cells
   can become empty strings; character splitting does not preserve table boundaries.
@@ -119,7 +123,8 @@ These are observations, not fixes or acceptance claims:
   reranker, and benchmark claims. No supporting evaluation artifacts were found.
   The historical claims must not be cited as validated results.
 
-See the [Phase 1.0 verification baseline](phase-1.0-baseline.md) for the original results
-and the [Phase 1.0.1 baseline](phase-1.0.1-baseline.md) for the green offline test suite.
+See the [Phase 1.0 verification baseline](phase-1.0-baseline.md) for the original results,
+the [Phase 1.0.1 baseline](phase-1.0.1-baseline.md) for its green offline test suite,
+and the [Phase 1.0.2 baseline](phase-1.0.2-baseline.md) for the current failure semantics.
 Future agents should follow [AGENTS.md](../AGENTS.md) and the
 [ExecPlan contract](../.agent/PLANS.md).

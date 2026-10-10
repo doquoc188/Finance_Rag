@@ -80,7 +80,7 @@ Tạo file `.env` từ `.env.example`:
 ```bash
 cp .env.example .env
 ```
-*(Cấu hình `OPENAI_API_KEY` của bạn hoặc hệ thống sẽ tự dùng Fake/Mock ChatModel để test nhanh).*
+*(Cấu hình `OPENAI_API_KEY` khi dùng OpenAI. Từ Phase 1.0.2, thiếu cấu hình hoặc lỗi provider sẽ báo lỗi rõ ràng, không tự thay bằng mô hình giả. Xem [ghi chú thay đổi](docs/phase-1.0.2-baseline.md).)*
 
 ### 3. Khởi chạy FastAPI Backend Server
 ```bash

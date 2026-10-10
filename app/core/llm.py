@@ -1,63 +1,99 @@
-import os
 from typing import Any
+
 from app.config import settings
+from app.core.errors import ModelConfigurationError, ProviderUnavailableError
 
-class SimpleFakeLLM:
-    """Fallback LLM for development when external APIs / libraries are not yet loaded."""
-    def __init__(self, responses: list = None):
-        self.responses = responses or [
-            "Theo Báo cáo thường niên 2023 của Tập đoàn FPT, Doanh thu hợp nhất đạt 52.618 tỷ đồng (tăng 19,6%) và Lợi nhuận trước thuế đạt 9.203 tỷ đồng (tăng 20,1%). [Nguồn: FPT_BaoCaoThuongNien_2023.md, Trang: 14]"
-        ]
-        self._idx = 0
-
-    def invoke(self, input_data: Any) -> Any:
-        resp_text = self.responses[self._idx % len(self.responses)]
-        self._idx += 1
-        class ResponseContent:
-            def __init__(self, content):
-                self.content = content
-        return ResponseContent(resp_text)
-
-    def with_structured_output(self, schema_cls: Any):
-        class StructuredModel:
-            def invoke(self, input_data: Any):
-                class Score:
-                    binary_score = "yes"
-                    is_useful = "yes"
-                return Score()
-        return StructuredModel()
 
 def get_embeddings() -> Any:
     """Returns Embeddings model with graceful fallback."""
     try:
         if settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("mock"):
             from langchain_openai import OpenAIEmbeddings
-            return OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=settings.OPENAI_API_KEY)
+
+            return OpenAIEmbeddings(
+                model="text-embedding-3-small", openai_api_key=settings.OPENAI_API_KEY
+            )
         else:
             from langchain_community.embeddings import HuggingFaceEmbeddings
+
             return HuggingFaceEmbeddings(model_name=settings.EMBEDDING_MODEL)
     except Exception:
+
         class DummyEmbeddings:
             def embed_documents(self, texts):
                 return [[0.1] * 128 for _ in texts]
+
             def embed_query(self, text):
                 return [0.1] * 128
+
         return DummyEmbeddings()
 
+
 def get_llm(temperature: float = 0.0) -> Any:
-    """Factory function to get LLM instance based on settings."""
+    """Initialize the configured real provider, or raise an explicit model error."""
     provider = settings.LLM_PROVIDER.lower()
+
+    if provider == "openai":
+        if not settings.OPENAI_API_KEY.strip() or settings.OPENAI_API_KEY.startswith("mock"):
+            raise ModelConfigurationError(
+                "OPENAI_API_KEY is required and must not be a mock key for the OpenAI provider."
+            )
+        model_name = settings.OPENAI_MODEL
+        model_setting = "OPENAI_MODEL"
+        package = "langchain-openai"
+    elif provider == "groq":
+        if not settings.GROQ_API_KEY.strip():
+            raise ModelConfigurationError("GROQ_API_KEY is required for the Groq provider.")
+        model_name = settings.GROQ_MODEL
+        model_setting = "GROQ_MODEL"
+        package = "langchain-groq"
+    elif provider == "ollama":
+        if not settings.OLLAMA_BASE_URL.strip():
+            raise ModelConfigurationError("OLLAMA_BASE_URL is required for the Ollama provider.")
+        model_name = settings.OLLAMA_MODEL
+        model_setting = "OLLAMA_MODEL"
+        package = "langchain-community"
+    else:
+        raise ModelConfigurationError("LLM_PROVIDER must be one of: openai, groq, ollama.")
+
+    if not model_name.strip():
+        raise ModelConfigurationError(f"{model_setting} is required for the configured provider.")
+
+    model_class: Any
+    model_options: dict[str, Any] = {"model": model_name, "temperature": temperature}
     try:
-        if provider == "openai" and settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("mock"):
+        if provider == "openai":
             from langchain_openai import ChatOpenAI
-            return ChatOpenAI(model=settings.OPENAI_MODEL, temperature=temperature, api_key=settings.OPENAI_API_KEY)
-        elif provider == "groq" and settings.GROQ_API_KEY:
+
+            model_class = ChatOpenAI
+            model_options["api_key"] = settings.OPENAI_API_KEY
+        elif provider == "groq":
             from langchain_groq import ChatGroq
-            return ChatGroq(model=settings.GROQ_MODEL, temperature=temperature, groq_api_key=settings.GROQ_API_KEY)
-        elif provider == "ollama":
-            from langchain_community.chat_models import ChatOllama
-            return ChatOllama(base_url=settings.OLLAMA_BASE_URL, model=settings.OLLAMA_MODEL, temperature=temperature)
+
+            model_class = ChatGroq
+            model_options["groq_api_key"] = settings.GROQ_API_KEY
         else:
-            return SimpleFakeLLM()
-    except Exception:
-        return SimpleFakeLLM()
+            from langchain_community.chat_models import ChatOllama
+
+            model_class = ChatOllama
+            model_options["base_url"] = settings.OLLAMA_BASE_URL
+    except ImportError as exc:
+        raise ProviderUnavailableError(
+            f"Package '{package}' and its dependencies are required for provider '{provider}'. "
+            "Install it in the active environment (Groq: uv sync --extra groq)."
+        ) from exc
+    except Exception as exc:
+        # Lazy SDK imports can fail while executing dependency initialization code.
+        raise ProviderUnavailableError(
+            f"Failed to load provider '{provider}'. Check the '{package}' installation."
+        ) from exc
+
+    try:
+        return model_class(**model_options)
+    except Exception as exc:
+        # SDK constructors expose different exception types at this integration boundary.
+        # Keep the cause for debugging, but never copy its potentially secret text.
+        raise ProviderUnavailableError(
+            f"Failed to initialize the configured {provider} model. "
+            f"Check {model_setting} and the provider configuration."
+        ) from exc
