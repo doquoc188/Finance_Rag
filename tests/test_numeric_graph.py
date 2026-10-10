@@ -52,7 +52,12 @@ def test_real_compiled_graph_propagates_numeric_report_and_conservative_flags(
     graph = build_finrag_graph(ModelRoles(generation, grading, rewrite))
     assert isinstance(graph, CompiledStateGraph)
     result = graph.invoke(
-        {"question": "What was revenue?", "retry_count": 0, "web_search_needed": False}
+        {
+            "question": "What was revenue?",
+            "rewrite_attempts": 0,
+            "retry_count": 0,
+            "web_search_needed": False,
+        }
     )
     assert result["generation"] == answer
     (verification,) = result["numeric_verification"]
@@ -65,6 +70,7 @@ def test_real_compiled_graph_propagates_numeric_report_and_conservative_flags(
     assert result["is_hallucinated"] == hallucinated
     assert result["is_useful"] == useful
     assert result["retry_count"] == 0
+    assert result["rewrite_attempts"] == 0
     assert result["web_search_needed"] is False
     assert len(generation.calls) == len(grading.calls) == 1
     assert rewrite.calls == []

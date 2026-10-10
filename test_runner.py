@@ -48,6 +48,7 @@ try:
 
     initial_state: FinGraphUpdate = {
         "question": "Doanh thu hợp nhất năm 2023 của FPT là bao nhiêu?",
+        "rewrite_attempts": 0,
         "retry_count": 0,
         "web_search_needed": False,
     }

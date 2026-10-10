@@ -19,6 +19,7 @@ def node_state(question: str, documents: list[Document]) -> FinGraphState:
         "is_hallucinated": "no",
         "is_useful": "yes",
         "retry_count": 0,
+        "rewrite_attempts": 0,
         "citations": [],
     }
 
@@ -140,7 +141,6 @@ def test_each_candidate_is_graded_individually_with_question_and_negative_grade(
     )
     assert all("What was the revenue?" in call.input for call in model.calls)
     assert all(call.schema is GradeDocuments for call in model.calls)
-    # Preserve existing policy: retain original docs if all candidates are rejected.
-    assert result["documents"] == documents
+    assert result["documents"] == []
     assert result["is_relevant"] == "no"
-    assert result["web_search_needed"] is True
+    assert result["web_search_needed"] is False

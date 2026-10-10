@@ -29,4 +29,7 @@ def compose_runtime(
         registry = ChatProviderRegistry()
         register_builtin_chat_providers(registry)
     roles = resolve_model_roles(configuration, registry)
-    return GraphRuntime(configuration, roles, build_finrag_graph(roles))
+    graph = build_finrag_graph(
+        roles, max_rewrite_attempts=configuration.retrieval.max_rewrite_attempts
+    )
+    return GraphRuntime(configuration, roles, graph)

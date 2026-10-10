@@ -63,7 +63,14 @@ def retrieve_node(state: FinGraphState) -> FinGraphUpdate:
                 },
             )
         ]
-    return {"documents": docs, "question": state["question"]}
+    rewrite_attempts = state.get("rewrite_attempts", state.get("retry_count", 0))
+    return {
+        "documents": docs,
+        "question": state["question"],
+        "rewrite_attempts": rewrite_attempts,
+        "retry_count": rewrite_attempts,
+        "web_search_needed": False,
+    }
 
 
 def grade_documents_node(state: FinGraphState, *, model: BaseChatModel) -> FinGraphUpdate:
@@ -84,8 +91,6 @@ def grade_documents_node(state: FinGraphState, *, model: BaseChatModel) -> FinGr
     )
 
     filtered_docs = []
-    web_search_needed = False
-
     for d in docs:
         try:
             structured_llm = model.with_structured_output(GradeDocuments)
@@ -109,17 +114,12 @@ def grade_documents_node(state: FinGraphState, *, model: BaseChatModel) -> FinGr
 
         if score == "yes":
             filtered_docs.append(d)
-        else:
-            web_search_needed = True
-
-    if not filtered_docs:
-        web_search_needed = True
 
     is_rel = "yes" if filtered_docs else "no"
     return {
-        "documents": filtered_docs if filtered_docs else docs,
+        "documents": filtered_docs,
         "is_relevant": is_rel,
-        "web_search_needed": web_search_needed,
+        "web_search_needed": False,
     }
 
 
@@ -172,10 +172,14 @@ def generate_node(state: FinGraphState, *, model: BaseChatModel) -> FinGraphUpda
 def transform_query_node(state: FinGraphState, *, model: BaseChatModel) -> FinGraphUpdate:
     print("--- [Graph Node] TRANSFORM QUERY ---")
     question = state["question"]
-    retry_count = state.get("retry_count", 0) + 1
+    rewrite_attempts = state.get("rewrite_attempts", state.get("retry_count", 0)) + 1
     res = model.invoke(f"Rewrite query: {question}")
     new_query = cast(str, res.content if hasattr(res, "content") else str(res))
-    return {"transformed_question": new_query.strip(), "retry_count": retry_count}
+    return {
+        "transformed_question": new_query.strip(),
+        "rewrite_attempts": rewrite_attempts,
+        "retry_count": rewrite_attempts,
+    }
 
 
 def web_search_node(state: FinGraphState) -> FinGraphUpdate:

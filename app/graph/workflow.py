@@ -12,7 +12,6 @@ from app.graph.nodes import (
     create_transform_query_node,
     grade_generation_node,
     retrieve_node,
-    web_search_node,
 )
 from app.graph.state import FinGraphState, FinGraphUpdate
 
@@ -20,36 +19,36 @@ from app.graph.state import FinGraphState, FinGraphUpdate
 class FallbackStateGraph:
     """Fallback Workflow Engine when langgraph package is loading or not yet installed."""
 
-    def __init__(self, grade: GraphNode, generate: GraphNode, rewrite: GraphNode) -> None:
+    def __init__(
+        self,
+        grade: GraphNode,
+        generate: GraphNode,
+        rewrite: GraphNode,
+        max_rewrite_attempts: int,
+    ) -> None:
         self._grade = grade
         self._generate = generate
         self._rewrite = rewrite
+        self._max_rewrite_attempts = max_rewrite_attempts
 
     def invoke(self, initial_state: FinGraphUpdate) -> FinGraphState:
         # Both engines accept partial input and populate the existing state in order.
-        state = cast(FinGraphState, initial_state)
-        # Step 1: Retrieve
-        s1 = retrieve_node(state)
-        state.update(s1)
+        state = cast(FinGraphState, dict(initial_state))
+        rewrite_attempts = state.get("rewrite_attempts", state.get("retry_count", 0))
+        state["rewrite_attempts"] = rewrite_attempts
+        state["retry_count"] = rewrite_attempts
 
-        # Step 2: Grade Documents
-        s2 = self._grade(state)
-        state.update(s2)
+        while True:
+            state.update(retrieve_node(state))
+            state.update(self._grade(state))
+            if state["is_relevant"] == "yes":
+                break
+            if state["rewrite_attempts"] >= self._max_rewrite_attempts:
+                break
+            state.update(self._rewrite(state))
 
-        # Condition Check
-        if state.get("web_search_needed") or state.get("is_relevant") == "no":
-            s4 = self._rewrite(state)
-            state.update(s4)
-            s5 = web_search_node(state)
-            state.update(s5)
-
-        # Step 3: Generate
-        s3 = self._generate(state)
-        state.update(s3)
-
-        # Step 6: Fact Check
-        s6 = grade_generation_node(state)
-        state.update(s6)
+        state.update(self._generate(state))
+        state.update(grade_generation_node(state))
 
         return state
 
@@ -59,8 +58,14 @@ type FinragGraph = (
 )
 
 
-def build_finrag_graph(model_roles: ModelRoles) -> FinragGraph:
+def build_finrag_graph(model_roles: ModelRoles, *, max_rewrite_attempts: int = 2) -> FinragGraph:
     """Builds and compiles the Self-Corrective Financial RAG StateGraph."""
+    if (
+        isinstance(max_rewrite_attempts, bool)
+        or not isinstance(max_rewrite_attempts, int)
+        or max_rewrite_attempts < 0
+    ):
+        raise ValueError("max_rewrite_attempts must be a non-negative integer")
     grade = create_grade_documents_node(model_roles.grading)
     generate = create_generate_node(model_roles.generation)
     rewrite = create_transform_query_node(model_roles.query_rewrite)
@@ -73,17 +78,15 @@ def build_finrag_graph(model_roles: ModelRoles) -> FinragGraph:
         workflow.add_node("grade_documents", grade, input_schema=FinGraphState)
         workflow.add_node("generate", generate, input_schema=FinGraphState)
         workflow.add_node("transform_query", rewrite, input_schema=FinGraphState)
-        workflow.add_node("web_search", web_search_node)
         workflow.add_node("fact_check", grade_generation_node)
 
         workflow.add_edge(START, "retrieve")
         workflow.add_edge("retrieve", "grade_documents")
 
         def decide_to_generate(state: FinGraphState) -> Literal["transform_query", "generate"]:
-            web_search = state.get("web_search_needed", False)
             is_rel = state.get("is_relevant", "yes")
-            retry_count = state.get("retry_count", 0)
-            if (web_search or is_rel == "no") and retry_count < 2:
+            rewrite_attempts = state.get("rewrite_attempts", state.get("retry_count", 0))
+            if is_rel == "no" and rewrite_attempts < max_rewrite_attempts:
                 return "transform_query"
             return "generate"
 
@@ -93,14 +96,16 @@ def build_finrag_graph(model_roles: ModelRoles) -> FinragGraph:
             {"transform_query": "transform_query", "generate": "generate"},
         )
 
-        workflow.add_edge("transform_query", "web_search")
-        workflow.add_edge("web_search", "generate")
+        workflow.add_edge("transform_query", "retrieve")
         workflow.add_edge("generate", "fact_check")
         workflow.add_edge("fact_check", END)
 
-        app = workflow.compile()
+        # One failed attempt traverses rewrite -> retrieve -> grade. Raise LangGraph's
+        # execution ceiling with the validated policy so large finite budgets remain finite.
+        recursion_limit = max(25, 3 * max_rewrite_attempts + 10)
+        app = workflow.compile().with_config(recursion_limit=recursion_limit)
         print("[LangGraph] Successfully compiled FinRAG StateGraph Workflow.")
         return app
     except Exception as e:
         print(f"[Notice] Using Fallback StateGraph Engine ({type(e).__name__}).")
-        return FallbackStateGraph(grade, generate, rewrite)
+        return FallbackStateGraph(grade, generate, rewrite, max_rewrite_attempts)

@@ -37,12 +37,20 @@ class RetrievalSettings(_ConfigModel):
     sparse_top_k: int = Field(default=20, gt=0)
     fused_top_k: int = Field(default=20, gt=0)
     final_top_k: int = Field(default=4, gt=0)
+    max_rewrite_attempts: int = Field(default=2, ge=0)
 
     @field_validator("dense_top_k", "sparse_top_k", "fused_top_k", "final_top_k", mode="before")
     @classmethod
     def reject_boolean_counts(cls, value: object) -> object:
         if isinstance(value, bool):
             raise ValueError("Retrieval counts must be positive integers, not booleans")
+        return value
+
+    @field_validator("max_rewrite_attempts", mode="before")
+    @classmethod
+    def reject_boolean_rewrite_attempts(cls, value: object) -> object:
+        if isinstance(value, bool):
+            raise ValueError("max_rewrite_attempts must be a non-negative integer, not a boolean")
         return value
 
     @model_validator(mode="after")

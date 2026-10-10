@@ -47,6 +47,7 @@ def test_finrag_langgraph_invocation(workflow_chat_model: WorkflowChatModel) -> 
     assert isinstance(finrag_app, CompiledStateGraph)
     initial_state: FinGraphUpdate = {
         "question": "Doanh thu năm 2023 của FPT là bao nhiêu?",
+        "rewrite_attempts": 0,
         "retry_count": 0,
         "web_search_needed": False,
     }

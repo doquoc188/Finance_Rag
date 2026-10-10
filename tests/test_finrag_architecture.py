@@ -98,7 +98,7 @@ def test_graph_imports_resolved_models_without_provider_or_settings_dependencies
         "langgraph",
         "pydantic",
         "typing_extensions",
-        "duckduckgo_search",  # Existing web node; no chat provider integration.
+        "duckduckgo_search",  # Legacy unregistered helper; no chat provider integration.
     )
     for path in graph_dir.glob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))

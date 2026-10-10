@@ -2,7 +2,6 @@
 
 import socket
 import sys
-from types import ModuleType
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,7 +15,7 @@ from app.graph.state import FinGraphUpdate
 from app.graph.workflow import FallbackStateGraph, build_finrag_graph
 from app.main import create_app
 from app.runtime import GraphRuntime, compose_runtime
-from finrag.config import ChatModelSettings, Settings
+from finrag.config import ChatModelSettings, RetrievalSettings, Settings
 from finrag.models import ModelRoles
 from finrag.providers import ChatProviderRegistry
 from finrag.providers.errors import (
@@ -25,7 +24,7 @@ from finrag.providers.errors import (
     ProviderInitializationError,
     ProviderNotRegisteredError,
 )
-from tests.chat_models import ModelCall, WorkflowChatModel
+from tests.chat_models import WorkflowChatModel
 
 
 @pytest.fixture(autouse=True)
@@ -38,13 +37,14 @@ def isolate_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(llm, "get_llm", reject_legacy_model)
 
 
-def role_settings() -> Settings:
+def role_settings(max_rewrite_attempts: int = 2) -> Settings:
     return Settings(
         generation=ChatModelSettings(provider="generate-test", model="generation", temperature=0.1),
         grading=ChatModelSettings(provider="grade-test", model="grading"),
         query_rewrite=ChatModelSettings(
             provider="rewrite-test", model="query_rewrite", temperature=0.2
         ),
+        retrieval=RetrievalSettings(max_rewrite_attempts=max_rewrite_attempts),
     )
 
 
@@ -65,8 +65,13 @@ def make_test_registry(
     return registry
 
 
-def initial_state(retry_count: int = 0) -> FinGraphUpdate:
-    return {"question": "Doanh thu FPT?", "retry_count": retry_count, "web_search_needed": False}
+def initial_state() -> FinGraphUpdate:
+    return {
+        "question": "Doanh thu FPT?",
+        "rewrite_attempts": 0,
+        "retry_count": 0,
+        "web_search_needed": False,
+    }
 
 
 def test_event_loop_socketpair_does_not_allow_provider_connections() -> None:
@@ -80,39 +85,17 @@ def test_event_loop_socketpair_does_not_allow_provider_connections() -> None:
                 connection.connect(address)
 
 
-@pytest.mark.parametrize(("score", "retry_count"), [("yes", 0), ("no", 0), ("no", 2)])
-def test_real_compiled_graph_routes_distinct_roles(
-    monkeypatch: pytest.MonkeyPatch, score: str, retry_count: int
-) -> None:
+def test_real_compiled_graph_routes_distinct_roles() -> None:
     generation = WorkflowChatModel(role="generation", responses=["Role-specific financial answer."])
-    grading = WorkflowChatModel(role="grading", responses=["unused"], binary_score=score)
+    grading = WorkflowChatModel(role="grading", responses=["unused"], binary_score="yes")
     rewrite = WorkflowChatModel(role="query_rewrite", responses=["  FPT annual report 2023  "])
-    queries: list[str] = []
-
-    class OfflineSearch:
-        def __enter__(self) -> "OfflineSearch":
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            pass
-
-        def text(self, *, keywords: str, max_results: int) -> list[dict[str, str]]:
-            queries.append(keywords)
-            assert max_results == 3
-            return [
-                {"title": "Local report", "href": "https://example.invalid/report", "body": "FPT"}
-            ]
-
-    module = ModuleType("duckduckgo_search")
-    setattr(module, "DDGS", OfflineSearch)
-    monkeypatch.setitem(sys.modules, "duckduckgo_search", module)
     graph = build_finrag_graph(ModelRoles(generation, grading, rewrite))
     assert isinstance(graph, CompiledStateGraph)
-    result = graph.invoke(initial_state(retry_count))
+    result = graph.invoke(initial_state())
 
     assert result["generation"] == "Role-specific financial answer."
     assert result["question"] == "Doanh thu FPT?"
-    assert result["is_relevant"] == score
+    assert result["is_relevant"] == "yes"
     assert result["is_hallucinated"] == "no"
     assert result["is_useful"] == "yes"
     assert len(generation.calls) == len(grading.calls) == 1
@@ -128,21 +111,10 @@ def test_real_compiled_graph_routes_distinct_roles(
     assert f"QUESTION:\n{result['question']}" in grading_call.input
     assert f"CANDIDATE DOCUMENT:\n{result['documents'][0].page_content}" in grading_call.input
 
-    if score == "no" and retry_count < 2:
-        assert rewrite.calls == [ModelCall("query_rewrite", "Rewrite query: Doanh thu FPT?")]
-        assert result["transformed_question"] == "FPT annual report 2023"
-        assert result["retry_count"] == 1
-        assert result["web_search_needed"] is False
-        assert queries == ["FPT annual report 2023 báo cáo tài chính"]
-        assert len(result["documents"]) == len(result["citations"]) == 2
-        assert result["citations"][1]["source"] == "DuckDuckGo Web Search"
-        assert "Local report" in result["documents"][1].page_content
-    else:
-        assert rewrite.calls == []
-        assert queries == []
-        assert result["retry_count"] == retry_count
-        assert result["web_search_needed"] is (score == "no")
-        assert len(result["documents"]) == len(result["citations"]) == 1
+    assert rewrite.calls == []
+    assert result["rewrite_attempts"] == result["retry_count"] == 0
+    assert result["web_search_needed"] is False
+    assert len(result["documents"]) == len(result["citations"]) == 1
 
 
 def test_composition_passes_original_configs_and_reuses_models_for_queries() -> None:
@@ -163,6 +135,26 @@ def test_composition_passes_original_configs_and_reuses_models_for_queries() -> 
     assert len(records) == 3
     assert len(records[0][1].calls) == len(records[1][1].calls) == 2
     assert records[2][1].calls == []
+
+
+def test_composition_passes_validated_rewrite_budget_to_graph(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: list[int] = []
+    original_builder = composition.build_finrag_graph
+
+    def record_builder(roles: ModelRoles, *, max_rewrite_attempts: int = 2) -> CompiledStateGraph:
+        captured.append(max_rewrite_attempts)
+        graph = original_builder(roles, max_rewrite_attempts=max_rewrite_attempts)
+        assert isinstance(graph, CompiledStateGraph)
+        return graph
+
+    monkeypatch.setattr(composition, "build_finrag_graph", record_builder)
+    configuration = role_settings(max_rewrite_attempts=0)
+    runtime = compose_runtime(configuration, registry=make_test_registry([]))
+
+    assert runtime.settings is configuration
+    assert captured == [0]
 
 
 def test_default_composition_owns_fresh_empty_registries(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -212,6 +204,7 @@ def test_fastapi_lifespan_composes_once_per_instance_and_chat_reuses_graph(
             body = response.json()
             assert body["answer"] == "answer:generation"
             assert body["execution_info"]["retry_count"] == 0
+            assert "rewrite_attempts" not in body["execution_info"]
             assert body["citations"][0]["source"] == "FPT_Annual_Report_2023.pdf"
         assert len(runtimes) == 1
         assert first.state.runtime is runtimes[0]
@@ -277,3 +270,21 @@ def test_existing_engine_fallback_uses_injected_models(monkeypatch: pytest.Monke
     assert graph.invoke(initial_state())["generation"] == "fallback engine answer"
     assert len(generation.calls) == len(grading.calls) == 1
     assert rewrite.calls == []
+
+
+def test_existing_engine_fallback_honors_zero_rewrite_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    generation = WorkflowChatModel(role="generation", responses=["must not be called"])
+    grading = WorkflowChatModel(role="grading", responses=["unused"], binary_score="no")
+    rewrite = WorkflowChatModel(role="query_rewrite", responses=["must not be called"])
+    monkeypatch.setitem(sys.modules, "langgraph.graph", None)
+    graph = build_finrag_graph(ModelRoles(generation, grading, rewrite), max_rewrite_attempts=0)
+
+    assert isinstance(graph, FallbackStateGraph)
+    result = graph.invoke(initial_state())
+    assert result["generation"] == (
+        "Không đủ bằng chứng từ tài liệu được cung cấp để trả lời câu hỏi này."
+    )
+    assert result["rewrite_attempts"] == 0
+    assert generation.calls == rewrite.calls == []

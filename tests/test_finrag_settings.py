@@ -35,6 +35,7 @@ def test_defaults_need_no_credentials_and_roles_are_separate() -> None:
     assert settings.embedding.provider == "huggingface"
     assert settings.retrieval.strategy is RetrievalStrategy.DENSE
     assert settings.retrieval.final_top_k == 4
+    assert settings.retrieval.max_rewrite_attempts == 2
     assert settings.graphrag.enabled is False
     assert settings.graphrag.index_name is None
     assert "temperature" not in EmbeddingSettings.model_fields
@@ -68,6 +69,7 @@ def test_nested_environment_loading(monkeypatch: pytest.MonkeyPatch) -> None:
         "FINRAG_EMBEDDING__MODEL": "embedding-model",
         "FINRAG_RETRIEVAL__FUSED_TOP_K": "8",
         "FINRAG_RETRIEVAL__FINAL_TOP_K": "3",
+        "FINRAG_RETRIEVAL__MAX_REWRITE_ATTEMPTS": "5",
         "FINRAG_RETRIEVAL__STRATEGY": "graph",
         "FINRAG_GRAPHRAG__ENABLED": "true",
         "FINRAG_GRAPHRAG__INDEX_NAME": "annual-reports",
@@ -87,6 +89,7 @@ def test_nested_environment_loading(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.embedding == EmbeddingSettings(provider="local", model="embedding-model")
     assert settings.retrieval.fused_top_k == 8
     assert settings.retrieval.final_top_k == 3
+    assert settings.retrieval.max_rewrite_attempts == 5
     assert settings.retrieval.strategy is RetrievalStrategy.GRAPH
     assert settings.graphrag == GraphRAGSettings(enabled=True, index_name="annual-reports")
 
@@ -132,6 +135,16 @@ def test_invalid_environment_count_is_validated(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("FINRAG_RETRIEVAL__FINAL_TOP_K", "-1")
     with pytest.raises(ValidationError, match="final_top_k"):
         Settings()
+
+
+@pytest.mark.parametrize("value", [-1, True, 1.5])
+def test_invalid_max_rewrite_attempts(value: Any) -> None:
+    with pytest.raises(ValidationError, match="max_rewrite_attempts"):
+        RetrievalSettings.model_validate({"max_rewrite_attempts": value})
+
+
+def test_zero_max_rewrite_attempts_disables_rewriting() -> None:
+    assert RetrievalSettings(max_rewrite_attempts=0).max_rewrite_attempts == 0
 
 
 def test_graph_configuration_is_explicitly_opt_in() -> None:

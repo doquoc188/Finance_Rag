@@ -23,6 +23,7 @@ class WorkflowChatModel(FakeListChatModel):
 
     role: str = "test"
     binary_score: str = "yes"
+    binary_scores: tuple[str, ...] = ()
     calls: list[ModelCall] = Field(default_factory=list)
 
     def _call(
@@ -44,11 +45,17 @@ class WorkflowChatModel(FakeListChatModel):
 
         def grade(value: LanguageModelInput) -> dict[str, Any] | BaseModel:
             messages = self._convert_input(value).to_messages()
+            score_index = sum(call.schema is not None for call in self.calls)
             self.calls.append(
                 ModelCall(
                     self.role, "\n".join(str(message.content) for message in messages), schema
                 )
             )
-            return schema.model_validate({"binary_score": self.binary_score, "is_useful": "yes"})
+            score = (
+                self.binary_scores[score_index]
+                if score_index < len(self.binary_scores)
+                else self.binary_score
+            )
+            return schema.model_validate({"binary_score": score, "is_useful": "yes"})
 
         return RunnableLambda(grade)

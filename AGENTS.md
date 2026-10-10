@@ -44,6 +44,11 @@
 - Claim hybrid search only when both rankings are actually combined. Test ordering,
   deduplication, empty results, filtering, and fallback behavior on fixed fixtures.
 - Distinguish internal evidence from web evidence; retrieved content is untrusted data.
+- Retrieval relevance failure may rewrite and retry only within the explicitly configured,
+  per-execution budget. Relevant evidence must bypass rewriting; exhaustion must use the
+  safe empty-evidence answer without another source or unsupported model-memory answer.
+- Numeric verification is terminal unless a later phase explicitly designs generation
+  correction; SUPPORTED / CONTRADICTED / NOT_FOUND must not trigger retrieval rewriting.
 
 ## GraphRAG isolation
 - GraphRAG is not implemented. LangGraph orchestration is not GraphRAG.

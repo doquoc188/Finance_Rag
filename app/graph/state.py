@@ -19,11 +19,12 @@ class FinGraphState(TypedDict):
     transformed_question: Optional[str]  # Rewritten query optimized for search
     documents: List[Document]  # Retrieved financial document chunks
     generation: str  # Final generated response text
-    web_search_needed: bool  # Flag whether web search was triggered
+    web_search_needed: bool  # Legacy compatibility flag; current graph does not search the web
     is_relevant: str  # "yes" or "no" (grade of documents)
     is_hallucinated: str  # Legacy name: numeric contradiction, not general hallucination
     is_useful: str  # Legacy name: numeric coverage, not a general usefulness grade
-    retry_count: int  # Number of transform query retries (prevent infinite loops)
+    retry_count: int  # Legacy API mirror of rewrite_attempts
+    rewrite_attempts: int  # Per-execution query-rewrite invocations
     citations: List[Dict[str, Any]]  # Structured citation metadata (File, Page, Company, Year)
     numeric_verification: NotRequired[tuple[NumericVerification, ...]]
 
@@ -40,5 +41,6 @@ class FinGraphUpdate(TypedDict, total=False):
     is_hallucinated: str
     is_useful: str
     retry_count: int
+    rewrite_attempts: int
     citations: list[dict[str, Any]]
     numeric_verification: tuple[NumericVerification, ...]

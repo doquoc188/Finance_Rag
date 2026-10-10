@@ -24,6 +24,7 @@ async def chat_endpoint(request: ChatRequest, http_request: Request) -> ChatResp
     try:
         initial_state: FinGraphUpdate = {
             "question": request.question,
+            "rewrite_attempts": 0,
             "retry_count": 0,
             "web_search_needed": False,
         }

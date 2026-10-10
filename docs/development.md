@@ -70,7 +70,7 @@ caller-owned factories control instance sharing/lifetime. The legacy application
 uses its existing construction path. See the
 [role-composition report](phase-1.1e-baseline.md) for behavior and verification.
 
-## Current graph runtime (Phases 1.1F / 1.2A / 1.2B)
+## Current graph runtime (Phases 1.1F / 1.2A / 1.2B / 1.2C)
 
 The Phase 1.1A–E paragraphs above describe those historical increments. The real
 application now consumes their contracts:
@@ -97,10 +97,11 @@ Lifespan shutdown releases the app's runtime reference; no new SDK close contrac
 | grade_documents | grading | prompt with question + candidate, with_structured_output(GradeDocuments) |
 | transform_query | query_rewrite | invoke("Rewrite query: ...") |
 
-retrieve, web_search, and fact_check use no chat model. fact_check uses the deterministic
-numeric verifier described below; the unused GradeHallucination schema is not an implemented LLM
-grader. Node factories accept only BaseChatModel. Graph construction imports no settings
-or provider adapters. The existing graph-engine fallback also uses the supplied models;
+retrieve and fact_check use no chat model. fact_check uses the deterministic numeric
+verifier described below; the unused GradeHallucination schema is not an implemented LLM
+grader. The Phase 1.2C graph does not register or invoke the legacy web-search helper.
+Node factories accept only BaseChatModel. Graph construction imports no settings or
+provider adapters. The existing graph-engine fallback also uses the supplied models;
 it never resolves a replacement provider. Startup composition errors propagate before
 graph construction: ProviderNotRegisteredError, ProviderConfigurationError,
 ProviderDependencyError, or ProviderInitializationError. The existing document-grading
@@ -135,8 +136,8 @@ and health disclosure debt is not redesigned here.
 
 Implemented: runtime model-role injection, explicit instance ownership, and offline
 compiled graph/composition/startup tests, plus the input corrections described below.
-Still pending: derived financial calculations, graph policy correctness, true hybrid retrieval,
-GraphRAG, and evaluation expansion. See the
+Still pending: derived financial calculations, true hybrid retrieval, GraphRAG, and
+evaluation expansion. See the
 [Phase 1.1F report](phase-1.1f-baseline.md) for measured checks and deferred defects.
 
 ## Grounded model inputs (Phase 1.2A)
@@ -165,11 +166,11 @@ to acknowledge that limit; model obedience is not established by offline fixture
 Document grading now receives explicit QUESTION and CANDIDATE DOCUMENT sections,
 with instructions to judge relevance to answering that question. The GradeDocuments
 structured schema and grading role are unchanged. Generation/rewrite roles, state,
-graph edges, retrieval, and retry policy are unchanged. Phase 1.2B adds the numeric
-verification described below.
-The existing grading heuristic on errors and retention of original documents when
-all are rejected remain graph-policy debt for Phase 1.2C. Existing mock retrieval/web
-placeholders can still become context; prompt delivery does not validate their provenance.
+graph edges, retrieval, and retry policy were unchanged in Phase 1.2A. Phase 1.2B adds
+the numeric verification described below; Phase 1.2C later replaces the one-shot web
+fallback and rejected-document retention with the bounded policy described below.
+The existing grading heuristic on model/schema errors and mock retrieval fallback remain
+separate debt; prompt delivery does not validate provenance.
 
 Recording tests inspect actual message text and structured schema use. The real
 compiled graph proves retrieved documents reach the generation request and grading
@@ -239,6 +240,46 @@ dates, and accounting parentheses are not interpreted. Unsupported mentions can 
 omitted, so an empty report is not comprehensive coverage. Evidence itself may be
 incomplete/conflicting or come from existing mock/web placeholders. See the
 [Phase 1.2B report](phase-1.2b-baseline.md) for measured tests and remaining scope.
+
+## Bounded retrieval correction (Phase 1.2C)
+
+```text
+START -> retrieve -> grade_documents
+                    | relevant evidence
+                    +---------------------> generate -> fact_check -> END
+                    |
+                    | no relevant evidence
+                    v
+              attempts remaining?
+                 | yes                 | no
+                 v                     v
+          transform_query          generate(empty)
+                 |                     |
+                 +-> retrieve           +-> fact_check -> END
+```
+
+`RetrievalSettings.max_rewrite_attempts` defaults to 2 and accepts non-negative integers;
+zero disables rewriting. Configure it with `FINRAG_RETRIEVAL__MAX_REWRITE_ATTEMPTS`.
+`compose_runtime` passes the validated value explicitly to `build_finrag_graph`; graph
+nodes do not construct settings or read the environment. Each invocation owns its
+`rewrite_attempts`, initialized to zero and incremented exactly once by each actual
+transform_query call. The existing `retry_count` state/API field remains a mirrored
+compatibility value. The new internal field is not added to the HTTP response schema.
+
+Question-aware grading still evaluates each candidate independently and keeps only
+`binary_score="yes"` documents. Any relevant evidence routes immediately to generation,
+even when another candidate was rejected. If none remain and budget is available, the
+existing query-rewrite role runs with its existing prompt and retrieval runs again. An
+identical rewrite still consumes one attempt. At exhaustion, the empty document list
+uses Phase 1.2A's fixed insufficient-evidence response, with no generation-model call,
+web search, provider fallback, or answer from model memory. The legacy web-search helper
+remains unregistered for compatibility and is not part of the compiled or fallback flow.
+
+Numeric verification remains terminal. A CONTRADICTED result stays visible in
+`numeric_verification` and the legacy flag, but it does not cause query rewriting or
+regeneration. This phase corrects retrieval relevance failure only; it does not claim
+recovery from arbitrary generation errors or complete self-correction. See the
+[Phase 1.2C report](phase-1.2c-baseline.md) for measured tests and remaining limits.
 
 ## Python and installation
 
@@ -317,8 +358,9 @@ and socket connections, and uses a temporary Hugging Face cache. The workflow te
 explicitly requests `workflow_chat_model`, a real LangChain fake chat-model interface
 with fixed test answers, call records, and schema-validated relevance grades, defined
 in tests/chat_models.py. Tests supply ModelRoles explicitly and reset shared retriever
-state for isolation. The graph and its nodes still execute. The real rewrite scenario
-replaces only the external web-search dependency with local results. TestClient exercises
+state for isolation. The graph and its nodes still execute. Real graph-policy scenarios
+use local retriever fixtures and verify bounded rewrite/retrieval cycles without web search.
+TestClient exercises
 lifespan startup and HTTP chat using explicit local factories. On Windows, the fixture
 allows only the internally created loopback socketpair needed by asyncio's wakeup pipe;
 normal socket connections, including localhost Ollama connections, remain blocked and
@@ -357,8 +399,8 @@ These are observations, not fixes or acceptance claims:
   context and tri-state results. Derived arithmetic, locale ambiguity, inferred table
   units, provenance/citation checks, and general hallucination detection remain unresolved.
 - Phase 1.0.2 deletes `SimpleFakeLLM` and the other canned chat-answer fallbacks.
-  Constant embedding fallback, mock retrieval evidence, heuristic grading, and web
-  placeholders remain separate retrieval/workflow debt; they are not model-quality evidence.
+  Constant embedding fallback, mock retrieval evidence, heuristic grading, and the
+  unregistered legacy web helper remain separate debt; they are not model-quality evidence.
 - LangGraph does not loop back after fact checking. GraphRAG is not implemented.
 - PDF failure falls back to decoding bytes as text, not pypdf. Zero-valued table cells
   can become empty strings; character splitting does not preserve table boundaries.
