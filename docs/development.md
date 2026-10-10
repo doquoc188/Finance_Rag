@@ -1,4 +1,4 @@
-# Phase 1.0 development foundation
+# Development foundation and runtime composition
 
 This phase adds engineering contracts and tooling. Application modules, existing test
 assertions, provider defaults, and the legacy runtime installation path are preserved.
@@ -70,6 +70,74 @@ caller-owned factories control instance sharing/lifetime. The legacy application
 uses its existing construction path. See the
 [role-composition report](phase-1.1e-baseline.md) for behavior and verification.
 
+## Current graph runtime (Phase 1.1F)
+
+The Phase 1.1A–E paragraphs above describe those historical increments. The real
+application now consumes their contracts:
+
+```text
+Process environment -> finrag.config.Settings
+  -> fresh ChatProviderRegistry -> register_builtin_chat_providers
+  -> resolve_model_roles -> ModelRoles
+  -> build_finrag_graph(model_roles) -> LangGraph
+```
+
+`app/runtime.py:compose_runtime` is the production composition root. An explicitly
+supplied registry is used unchanged (useful for offline tests); production defaults
+always register built-ins on a new empty registry. The sequential registration conflict
+edge remains a hardening item for callers reusing registries, not a production startup
+case. `app/main.py:create_app` composes once at lifespan startup and stores GraphRuntime
+on that application instance. Chat requests reuse its graph/models; a separate app gets
+separate composition. There is no import-time graph, model cache, or global registry.
+Lifespan shutdown releases the app's runtime reference; no new SDK close contract is added.
+
+| Graph node | Model role | Existing model interface |
+| --- | --- | --- |
+| generate | generation | ChatPromptTemplate pipe, message content |
+| grade_documents | grading | with_structured_output(GradeDocuments), invoke(document text) |
+| transform_query | query_rewrite | invoke("Rewrite query: ...") |
+
+retrieve, web_search, and fact_check use no chat model. fact_check retains its existing
+numeric notice logic; the unused GradeHallucination schema is not an implemented LLM
+grader. Node factories accept only BaseChatModel. Graph construction imports no settings
+or provider adapters. The existing graph-engine fallback also uses the supplied models;
+it never resolves a replacement provider. Startup composition errors propagate before
+graph construction: ProviderNotRegisteredError, ProviderConfigurationError,
+ProviderDependencyError, or ProviderInitializationError. The existing document-grading
+heuristic on invocation/schema failure remains unchanged and is separate technical debt.
+
+Chat selection now uses `FINRAG_GENERATION__*`, `FINRAG_GRADING__*`, and
+`FINRAG_QUERY_REWRITE__*`. Old `LLM_PROVIDER`, `OPENAI_MODEL`, `GROQ_MODEL`, and
+`OLLAMA_MODEL` no longer select graph chat models. Role settings retain Phase 1.1A
+defaults (OpenAI/gpt-4o-mini, all temperatures 0). `.env.example` explicitly configures
+the old graph temperatures 0.1/0/0.2. Supply credentials in the process environment:
+OPENAI_API_KEY, GROQ_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, or OLLAMA_BASE_URL
+as appropriate; optional SDK extras still need explicit installation. No connection or
+model availability is established merely by constructing clients.
+
+The new settings/adapters do not automatically read `.env`. To use a local file, load
+it explicitly at the command boundary, supplying real credentials only locally:
+
+```powershell
+uv run --env-file .env uvicorn app.main:app --reload
+```
+
+The existing application name/embedding/storage settings still use legacy app.config;
+its existing dotenv behavior is unchanged. `app/core/llm.py` remains for get_embeddings
+and the compatibility get_llm API, but graph code has no legacy chat-factory reference.
+The standalone simple_app.py remains independent. The manual test_runner.py now composes
+its graph explicitly and requires valid runtime configuration; it is not an offline test.
+
+Startup logs show only role/provider/model metadata. The health response's existing
+llm_provider field now identifies the generation role. Do not publish chained SDK
+tracebacks; only existing adapter outer messages are credential-safe. Existing API error
+and health disclosure debt is not redesigned here.
+
+Implemented: runtime model-role injection, explicit instance ownership, and offline
+compiled graph/composition/startup tests. Still pending: RAG correctness, true hybrid
+retrieval, GraphRAG, and evaluation expansion. See the
+[Phase 1.1F report](phase-1.1f-baseline.md) for measured checks and deferred defects.
+
 ## Python and installation
 
 Use Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
@@ -88,7 +156,8 @@ uv run pytest
 optional, and development dependencies. Use `uv sync --locked` in automation. The
 legacy application still runs directly from the repository. Since Phase 1.1A,
 setuptools packages only `src/finrag`, and `uv sync` installs it editably. The existing
-`app/` modules remain at their original paths and do not import the new package.
+`app/` modules remain at their original paths and now import the installed package
+for chat-role composition.
 
 `uv run uvicorn app.main:app --reload` and `uv run streamlit run ui/streamlit_app.py`
 retain the existing entry points. Running the application can use configured credentials
@@ -101,7 +170,8 @@ and services; the offline restrictions below apply to tests only.
 - Groq is lazy-imported and optional: use `uv sync --extra groq` when selecting it.
   Plain `uv sync` omits all optional chat integrations. The new Ollama factory uses
   the optional `langchain-ollama` extra; the legacy app still uses its existing community
-  adapter. The standalone demo uses the standard library for its providers.
+  adapter only through the retained compatibility helper. The migrated graph uses
+  the new factory. The standalone demo uses the standard library for its providers.
 - Anthropic/Google/Ollama extras have lower bounds matching the inspected constructor
   interfaces; `uv.lock` fixes exact versions. Google GenAI requires Tenacity below 9.2,
   so this phase changes the shared lock from 9.2.1 to 9.1.4; other existing versions
@@ -117,6 +187,9 @@ and services; the offline restrictions below apply to tests only.
   workflows, including its Groq and pytest entries. It is a legacy install path, not
   a generated export of the new lock. Docker still targets Python 3.10. Migrating it
   and retiring the duplicate dependency manifest requires a separately scoped change.
+  The migrated graph requires the installed finrag package and Python 3.12; use uv sync
+  or an editable project installation. The requirements-only/Python 3.10 Docker path
+  cannot run this migrated runtime and remains an explicit deployment compatibility debt.
 - The old requirements had no upper bounds or lockfile. The new lock is a reproducible
   development baseline, not proof that every permitted library version is compatible.
 
@@ -140,9 +213,14 @@ it is intentionally outside collection. No application modules were moved to ach
 before collection. It also sets a valid `DEBUG` value, disables tracing, model downloads,
 and socket connections, and uses a temporary Hugging Face cache. The workflow test
 explicitly requests `workflow_chat_model`, a real LangChain fake chat-model interface
-with fixed test answers and schema-validated relevance grades. It patches only the
-model factory reference used by graph nodes and resets shared retriever state for
-isolation; pytest restores both afterward. The graph and its nodes still execute.
+with fixed test answers, call records, and schema-validated relevance grades, defined
+in tests/chat_models.py. Tests supply ModelRoles explicitly and reset shared retriever
+state for isolation. The graph and its nodes still execute. The real rewrite scenario
+replaces only the external web-search dependency with local results. TestClient exercises
+lifespan startup and HTTP chat using explicit local factories. On Windows, the fixture
+allows only the internally created loopback socketpair needed by asyncio's wakeup pipe;
+normal socket connections, including localhost Ollama connections, remain blocked and
+are regression-tested. No provider API or external web request is made.
 The retriever smoke test continues to exercise existing fallback paths. These tests
 do not validate real embeddings, provider APIs, retrieval quality, or persistent
 storage. Tests are neither skipped nor converted to expected failures.

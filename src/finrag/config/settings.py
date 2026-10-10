@@ -1,4 +1,4 @@
-"""New configuration contracts; the legacy app does not consume them yet."""
+"""Validated configuration contracts consumed by application composition."""
 
 from typing import Self
 

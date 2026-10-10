@@ -1,4 +1,4 @@
-"""Explicit, typed chat-role composition outside domain and the legacy runtime."""
+"""Explicit, typed chat-role composition outside domain and graph orchestration."""
 
 from dataclasses import dataclass
 

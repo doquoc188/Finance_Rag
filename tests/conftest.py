@@ -1,28 +1,12 @@
 """Offline boundaries and opt-in model fixtures for workflow tests."""
 
 import socket
+import sys
 from tempfile import TemporaryDirectory
-from typing import Any
 
 import pytest
-from langchain_core.language_models.fake_chat_models import FakeListChatModel
-from langchain_core.runnables import Runnable, RunnableLambda
-from pydantic import BaseModel
 
-
-class WorkflowChatModel(FakeListChatModel):
-    """Real chat-model interface with fixed, test-only answers and relevance grades."""
-
-    def with_structured_output(
-        self, schema: Any, *, include_raw: bool = False, **kwargs: Any
-    ) -> Runnable[Any, BaseModel]:
-        if include_raw or not isinstance(schema, type) or not issubclass(schema, BaseModel):
-            raise NotImplementedError("The test model supports Pydantic schemas only")
-
-        def grade(_input: Any) -> BaseModel:
-            return schema.model_validate({"binary_score": "yes", "is_useful": "yes"})
-
-        return RunnableLambda(grade)
+from tests.chat_models import WorkflowChatModel
 
 
 @pytest.fixture
@@ -31,11 +15,7 @@ def workflow_chat_model(monkeypatch: pytest.MonkeyPatch) -> WorkflowChatModel:
 
     model = WorkflowChatModel(responses=["Offline workflow test response."])
 
-    def get_test_llm(temperature: float = 0.0) -> WorkflowChatModel:
-        return model
-
-    # Patch the reference consumed by nodes, not the original factory's module.
-    monkeypatch.setattr(nodes, "get_llm", get_test_llm)
+    # Models are supplied explicitly to the builder; only retrieval state is reset.
     monkeypatch.setattr(nodes, "global_retriever", None)
     return model
 
@@ -68,7 +48,37 @@ def pytest_configure(config: pytest.Config) -> None:
     for name, value in test_environment.items():
         monkeypatch.setenv(name, value)
 
-    def block_network(*args, **kwargs) -> None:
+    if sys.platform == "win32":
+        # Windows asyncio builds its wakeup pipe using a loopback socket pair.
+        # Only this pair's connection bypasses the guard; normal connects stay blocked.
+        original_connect = socket.socket.connect
+
+        def local_socketpair(
+            family: int = socket.AF_INET, type: int = socket.SOCK_STREAM, proto: int = 0
+        ) -> tuple[socket.socket, socket.socket]:
+            if family != socket.AF_INET or type != socket.SOCK_STREAM or proto != 0:
+                raise ValueError("Offline event-loop socket pairs support IPv4 TCP only")
+            with socket.socket(family, type, proto) as listener:
+                listener.bind(("127.0.0.1", 0))
+                listener.listen(1)
+                client = socket.socket(family, type, proto)
+                try:
+                    original_connect(client, listener.getsockname())
+                    server, _ = listener.accept()
+                    if (
+                        server.getpeername() != client.getsockname()
+                        or server.getsockname() != client.getpeername()
+                    ):
+                        server.close()
+                        raise RuntimeError("Unexpected connection to the offline socket pair")
+                    return server, client
+                except BaseException:
+                    client.close()
+                    raise
+
+        monkeypatch.setattr(socket, "socketpair", local_socketpair)
+
+    def block_network(*args: object, **kwargs: object) -> None:
         raise RuntimeError("Network access is disabled in the offline test suite")
 
     monkeypatch.setattr(socket.socket, "connect", block_network)

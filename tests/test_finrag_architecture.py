@@ -79,6 +79,38 @@ def test_package_import_boundaries(
                 ), f"{package_name} dependency boundary violated: {path.name} imports {module}"
 
 
+def test_graph_imports_resolved_models_without_provider_or_settings_dependencies() -> None:
+    graph_dir = Path(__file__).resolve().parent.parent / "app" / "graph"
+    allowed = (
+        "app.graph",
+        "app.core.errors",
+        "app.core.pdf_parser",
+        "app.core.vectorstore",  # Existing embeddings/retrieval path is not migrated.
+        "finrag.models",
+        "langchain_core",
+        "langgraph",
+        "pydantic",
+        "typing_extensions",
+        "duckduckgo_search",  # Existing web node; no chat provider integration.
+    )
+    for path in graph_dir.glob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            modules: list[str] = []
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                modules = [node.module or ""]
+            for module in modules:
+                assert module.split(".")[0] in sys.stdlib_module_names or any(
+                    module == name or module.startswith(name + ".") for name in allowed
+                ), f"{path.name}: graph must not import settings/provider construction: {module}"
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                assert node.func.id not in {"Settings", "get_llm", "resolve_model_roles"}
+            if isinstance(node, ast.Attribute):
+                assert node.attr not in {"environ", "getenv"}
+
+
 def test_provider_imports_need_no_sdks_credentials_network_or_global_registry(
     tmp_path: Path,
 ) -> None:

@@ -3,10 +3,13 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.core.pdf_parser import FinancialPDFParser
 from app.core.vectorstore import HybridFinancialRetriever
-from app.graph.workflow import finrag_app
+from app.graph.state import FinGraphUpdate
+from app.graph.workflow import build_finrag_graph
+from finrag.models import ModelRoles
+from tests.chat_models import WorkflowChatModel
 
 
-def test_financial_pdf_parser_markdown():
+def test_financial_pdf_parser_markdown() -> None:
     parser = FinancialPDFParser()
     sample_content = """# Báo cáo FPT 2023
 | Chỉ tiêu | 2023 |
@@ -20,7 +23,7 @@ def test_financial_pdf_parser_markdown():
     assert docs[0].metadata["has_table"] is True
 
 
-def test_hybrid_retriever():
+def test_hybrid_retriever() -> None:
     docs = [
         Document(
             page_content="FPT đạt doanh thu 52.618 tỷ đồng năm 2023.",
@@ -37,9 +40,12 @@ def test_hybrid_retriever():
     assert "FPT" in results[0].page_content
 
 
-def test_finrag_langgraph_invocation(workflow_chat_model):
+def test_finrag_langgraph_invocation(workflow_chat_model: WorkflowChatModel) -> None:
+    finrag_app = build_finrag_graph(
+        ModelRoles(workflow_chat_model, workflow_chat_model, workflow_chat_model)
+    )
     assert isinstance(finrag_app, CompiledStateGraph)
-    initial_state = {
+    initial_state: FinGraphUpdate = {
         "question": "Doanh thu năm 2023 của FPT là bao nhiêu?",
         "retry_count": 0,
         "web_search_needed": False,

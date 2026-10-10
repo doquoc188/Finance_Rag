@@ -10,7 +10,9 @@ import pytest
 from app.core import llm
 from app.core.errors import ModelConfigurationError, ProviderUnavailableError
 from app.graph import nodes
-from app.graph.workflow import finrag_app
+from app.runtime import compose_runtime
+from finrag.config import Settings
+from finrag.providers.errors import ProviderConfigurationError
 
 PROVIDERS = [
     ("openai", "langchain_openai", "ChatOpenAI"),
@@ -159,10 +161,9 @@ def test_valid_provider_preserves_constructor_arguments_and_return_value(
 
 
 def test_workflow_without_explicit_test_model_propagates_configuration_error() -> None:
-    with pytest.raises(ModelConfigurationError, match="OPENAI_API_KEY"):
-        finrag_app.invoke(
-            {"question": "Test question", "retry_count": 0, "web_search_needed": False}
-        )
+    # Failure moved from the first graph model call to application composition.
+    with pytest.raises(ProviderConfigurationError, match="OPENAI_API_KEY"):
+        compose_runtime(Settings())
 
 
 def test_missing_prompt_dependency_cannot_generate_a_canned_answer(

@@ -1,4 +1,8 @@
-from typing import Any, Dict, Optional
+from functools import partial
+from typing import Protocol, cast
+
+from langchain_core.language_models.chat_models import BaseChatModel
+from pydantic import BaseModel, Field
 
 from app.core.errors import ProviderUnavailableError
 
@@ -14,23 +18,12 @@ except ImportError as exc:
         "Package 'langchain-core' with ChatPromptTemplate is required. Run uv sync."
     ) from exc
 
-try:
-    from pydantic import BaseModel, Field
-except ImportError:
-    try:
-        from langchain_core.pydantic_v1 import BaseModel, Field
-    except ImportError:
-
-        class BaseModel:
-            pass
-
-        def Field(description=""):
-            return None
-
-
-from app.core.llm import get_llm
 from app.core.vectorstore import HybridFinancialRetriever
-from app.graph.state import FinGraphState
+from app.graph.state import FinGraphState, FinGraphUpdate
+
+
+class GraphNode(Protocol):
+    def __call__(self, state: FinGraphState) -> FinGraphUpdate: ...
 
 
 class GradeDocuments(BaseModel):
@@ -42,15 +35,15 @@ class GradeHallucination(BaseModel):
     is_useful: str = Field(description="Answer answers the user question, 'yes' or 'no'")
 
 
-global_retriever: Optional[HybridFinancialRetriever] = None
+global_retriever: HybridFinancialRetriever | None = None
 
 
-def set_global_retriever(retriever: HybridFinancialRetriever):
+def set_global_retriever(retriever: HybridFinancialRetriever) -> None:
     global global_retriever
     global_retriever = retriever
 
 
-def retrieve_node(state: FinGraphState) -> Dict[str, Any]:
+def retrieve_node(state: FinGraphState) -> FinGraphUpdate:
     print("--- [Graph Node] RETRIEVE DOCUMENTS ---")
     question = state.get("transformed_question") or state["question"]
 
@@ -71,19 +64,19 @@ def retrieve_node(state: FinGraphState) -> Dict[str, Any]:
     return {"documents": docs, "question": state["question"]}
 
 
-def grade_documents_node(state: FinGraphState) -> Dict[str, Any]:
+def grade_documents_node(state: FinGraphState, *, model: BaseChatModel) -> FinGraphUpdate:
     print("--- [Graph Node] GRADE DOCUMENTS RELEVANCE ---")
     _question = state["question"]
     docs = state["documents"]
 
-    llm = get_llm(temperature=0.0)
     filtered_docs = []
     web_search_needed = False
 
     for d in docs:
         try:
-            structured_llm = llm.with_structured_output(GradeDocuments)
-            res = structured_llm.invoke(d.page_content)
+            structured_llm = model.with_structured_output(GradeDocuments)
+            # A Pydantic schema returns that schema instance under LangChain's contract.
+            res = cast(GradeDocuments, structured_llm.invoke(d.page_content))
             score = res.binary_score.lower()
         except Exception:
             score = (
@@ -111,12 +104,11 @@ def grade_documents_node(state: FinGraphState) -> Dict[str, Any]:
     }
 
 
-def generate_node(state: FinGraphState) -> Dict[str, Any]:
+def generate_node(state: FinGraphState, *, model: BaseChatModel) -> FinGraphUpdate:
     print("--- [Graph Node] GENERATE FINANCIAL RESPONSE ---")
     question = state["question"]
     docs = state["documents"]
 
-    llm = get_llm(temperature=0.1)
     context_str = "\n\n".join(
         [
             f"--- TÀI LIỆU [Nguồn: {d.metadata.get('source', 'Unknown')}, Trang: {d.metadata.get('page', 1)}] ---\n{d.page_content}"
@@ -125,7 +117,7 @@ def generate_node(state: FinGraphState) -> Dict[str, Any]:
     )
 
     prompt_template = ChatPromptTemplate.from_messages([("user", "{question}")])
-    chain = prompt_template | llm
+    chain = prompt_template | model
     response = chain.invoke({"context": context_str, "question": question})
 
     citations = [
@@ -140,22 +132,24 @@ def generate_node(state: FinGraphState) -> Dict[str, Any]:
     ]
 
     return {
-        "generation": response.content if hasattr(response, "content") else str(response),
+        # Keep the existing textual-content contract without normalizing model output.
+        "generation": cast(
+            str, response.content if hasattr(response, "content") else str(response)
+        ),
         "citations": citations,
     }
 
 
-def transform_query_node(state: FinGraphState) -> Dict[str, Any]:
+def transform_query_node(state: FinGraphState, *, model: BaseChatModel) -> FinGraphUpdate:
     print("--- [Graph Node] TRANSFORM QUERY ---")
     question = state["question"]
     retry_count = state.get("retry_count", 0) + 1
-    llm = get_llm(temperature=0.2)
-    res = llm.invoke(f"Rewrite query: {question}")
-    new_query = res.content if hasattr(res, "content") else str(res)
+    res = model.invoke(f"Rewrite query: {question}")
+    new_query = cast(str, res.content if hasattr(res, "content") else str(res))
     return {"transformed_question": new_query.strip(), "retry_count": retry_count}
 
 
-def web_search_node(state: FinGraphState) -> Dict[str, Any]:
+def web_search_node(state: FinGraphState) -> FinGraphUpdate:
     print("--- [Graph Node] WEB SEARCH FALLBACK ---")
     question = state.get("transformed_question") or state["question"]
     docs = state.get("documents", [])
@@ -186,7 +180,7 @@ def web_search_node(state: FinGraphState) -> Dict[str, Any]:
     return {"documents": docs, "web_search_needed": False}
 
 
-def grade_generation_node(state: FinGraphState) -> Dict[str, Any]:
+def grade_generation_node(state: FinGraphState) -> FinGraphUpdate:
     print("--- [Graph Node] FACT-CHECK & HALLUCINATION GUARDRAIL ---")
     generation = state["generation"]
     docs = state["documents"]
@@ -202,3 +196,15 @@ def grade_generation_node(state: FinGraphState) -> Dict[str, Any]:
             print(f"[Fact-Check Notice] Number {num} checked against context.")
 
     return {"is_hallucinated": is_hallucinated, "is_useful": "yes"}
+
+
+def create_grade_documents_node(model: BaseChatModel) -> GraphNode:
+    return partial(grade_documents_node, model=model)
+
+
+def create_generate_node(model: BaseChatModel) -> GraphNode:
+    return partial(generate_node, model=model)
+
+
+def create_transform_query_node(model: BaseChatModel) -> GraphNode:
+    return partial(transform_query_node, model=model)

@@ -9,7 +9,8 @@
 ## Architecture boundaries
 - `src/finrag/config/`: validated settings only; no provider clients or runtime initialization.
 - `src/finrag/domain/`: immutable standard-library evidence/retrieval values; no framework,
-  provider, configuration, or legacy `app` imports. The legacy runtime is not migrated yet.
+  provider, configuration, or legacy `app` imports. Legacy retrieval has not adopted
+  these domain values yet.
 - `src/finrag/providers/`: explicit instance-owned chat factory registry; may import config
   contracts and LangChain Core, never legacy `app`. Import concrete integrations lazily
   inside their adapter factories; keep credentials out of general settings/domain.
@@ -17,13 +18,18 @@
   no environment reads, automatic registration, caches, or legacy runtime imports.
 - `app/api/`: HTTP validation, transport schemas, and service invocation.
 - `app/core/`: parsing, indexing/retrieval, and model access; no UI/HTTP dependencies.
-- `app/graph/`: LangGraph state and workflow orchestration, not a knowledge graph.
+- `app/graph/`: LangGraph orchestration using explicitly supplied ModelRoles;
+  nodes consume BaseChatModel, never settings, registries, or provider adapters.
+- `app/runtime.py`: application composition; fresh registry, built-in registrations,
+  role resolution once, explicit graph construction. FastAPI lifespan owns the runtime.
 - `app/config.py`: configuration; `ui/`: API client; `simple_app.py`: standalone demo.
 - Keep existing module paths and public contracts until an explicit migration is scoped.
   These boundaries guide changes; existing violations are debt, not permission to refactor.
 
 ## Model providers
 - Keep provider selection/configuration explicit and SDK details at model boundaries.
+- Graph chat selection uses FINRAG_ role settings; credentials stay in adapters.
+  Do not restore the legacy get_llm path, import-time graph singleton, or model cache.
 - Preserve current defaults and fallback behavior unless a migration authorizes changes.
   Never present mock output as evidence of a working provider or a factual answer.
 - Keep non-default provider SDKs optional. Test adapters with fakes; live tests must be
