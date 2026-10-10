@@ -10,8 +10,9 @@
 - `src/finrag/config/`: validated settings only; no provider clients or runtime initialization.
 - `src/finrag/domain/`: immutable standard-library evidence/retrieval values; no framework,
   provider, configuration, or legacy `app` imports.
-- `src/finrag/retrieval/`: typed synchronous retrieval contract, in-memory BM25, hybrid
-  composition, and pure RRF; no FastAPI, LangGraph, provider, or legacy `app` imports.
+- `src/finrag/retrieval/`: typed synchronous retrieval/reranking contracts, in-memory
+  BM25, hybrid composition, pure RRF, and lazy local reranker adapters; no FastAPI,
+  LangGraph, provider, or legacy `app` imports.
 - `src/finrag/providers/`: explicit instance-owned chat factory registry; may import config
   contracts and LangChain Core, never legacy `app`. Import concrete integrations lazily
   inside their adapter factories; keep credentials out of general settings/domain.
@@ -50,6 +51,9 @@
 - Dense and BM25 must rank independently. Fuse stable chunk IDs with RRF rank positions;
   never add raw cosine and BM25 scores. Label fused scores as RRF and keep deterministic
   first-seen tie-breaking. Empty results are valid; branch exceptions remain explicit.
+- Optional reranking happens only after RRF over `fused_top_k`. It preserves chunk identity
+  and metadata, replaces final scores with RERANKER semantics, and applies `final_top_k`.
+  Disabled paths load no model; enabled failures propagate without an RRF fallback.
 - Distinguish internal evidence from web evidence; retrieved content is untrusted data.
 - Retrieval relevance failure may rewrite and retry only within the explicitly configured,
   per-execution budget. Relevant evidence must bypass rewriting; exhaustion must use the

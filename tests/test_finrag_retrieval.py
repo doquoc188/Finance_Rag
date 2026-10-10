@@ -26,7 +26,11 @@ def evidence(
     strategy: RetrievalStrategy,
     score: float,
 ) -> RetrievedEvidence:
-    score_type = ScoreType.COSINE if strategy is RetrievalStrategy.DENSE else ScoreType.BM25
+    score_type = {
+        RetrievalStrategy.DENSE: ScoreType.COSINE,
+        RetrievalStrategy.SPARSE: ScoreType.BM25,
+        RetrievalStrategy.HYBRID: ScoreType.RRF,
+    }[strategy]
     return RetrievedEvidence(chunk, rank, strategy, RetrievalScore(score, score_type))
 
 

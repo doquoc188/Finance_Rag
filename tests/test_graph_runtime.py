@@ -24,8 +24,9 @@ from finrag.providers.errors import (
     ProviderInitializationError,
     ProviderNotRegisteredError,
 )
-from finrag.retrieval import Retriever
+from finrag.retrieval import Reranker, Retriever
 from tests.chat_models import WorkflowChatModel
+from tests.rerankers import ScoreReranker
 
 
 @pytest.fixture(autouse=True)
@@ -36,14 +37,23 @@ def isolate_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(llm, "get_llm", reject_legacy_model)
 
 
-def role_settings(max_rewrite_attempts: int = 2) -> Settings:
+def role_settings(
+    max_rewrite_attempts: int = 2,
+    *,
+    reranker_enabled: bool = False,
+    reranker_model: str = "BAAI/bge-reranker-v2-m3",
+) -> Settings:
     return Settings(
         generation=ChatModelSettings(provider="generate-test", model="generation", temperature=0.1),
         grading=ChatModelSettings(provider="grade-test", model="grading"),
         query_rewrite=ChatModelSettings(
             provider="rewrite-test", model="query_rewrite", temperature=0.2
         ),
-        retrieval=RetrievalSettings(max_rewrite_attempts=max_rewrite_attempts),
+        retrieval=RetrievalSettings(
+            max_rewrite_attempts=max_rewrite_attempts,
+            reranker_enabled=reranker_enabled,
+            reranker_model=reranker_model,
+        ),
     )
 
 
@@ -124,6 +134,7 @@ def test_composition_passes_original_configs_and_reuses_models_for_queries() -> 
     assert isinstance(runtime.graph, CompiledStateGraph)
     assert runtime.settings is configuration
     assert isinstance(runtime.retriever, HybridFinancialRetriever)
+    assert runtime.reranker is None
     configs = (configuration.generation, configuration.grading, configuration.query_rewrite)
     assert len(records) == 3
     assert all(record[0] is config for record, config in zip(records, configs, strict=True))
@@ -135,6 +146,45 @@ def test_composition_passes_original_configs_and_reuses_models_for_queries() -> 
     assert len(records) == 3
     assert len(records[0][1].calls) == len(records[1][1].calls) == 2
     assert records[2][1].calls == []
+
+
+def test_disabled_reranking_never_constructs_a_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reranker = ScoreReranker({})
+    requested_models: list[str] = []
+
+    def create(model_name: str) -> Reranker:
+        requested_models.append(model_name)
+        return reranker
+
+    monkeypatch.setattr(composition, "_create_reranker", create)
+
+    runtime = compose_runtime(role_settings(), registry=make_test_registry([]))
+
+    assert requested_models == []
+    assert runtime.reranker is None
+    assert reranker.calls == []
+
+
+def test_enabled_reranking_is_created_and_owned_by_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reranker = ScoreReranker({})
+    requested_models: list[str] = []
+
+    def create(model_name: str) -> Reranker:
+        requested_models.append(model_name)
+        return reranker
+
+    monkeypatch.setattr(composition, "_create_reranker", create)
+    configuration = role_settings(reranker_enabled=True, reranker_model="local/bge")
+
+    runtime = compose_runtime(configuration, registry=make_test_registry([]))
+
+    assert requested_models == ["local/bge"]
+    assert runtime.reranker is reranker
+    assert runtime.retriever.reranker is reranker
 
 
 def test_composition_passes_validated_rewrite_budget_to_graph(

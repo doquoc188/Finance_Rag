@@ -422,9 +422,59 @@ propagate rather than becoming empty results.
 Collection recreation still matches the legacy `force_recreate=True` lifecycle. Dense and
 BM25 are rebuilt from one in-memory corpus, but rebuilds are not transactional and stable
 upstream chunk IDs are absent. Phase 1.4 owns durable identity, incremental updates,
-deletion, idempotency, concurrency, and recovery. Phase 1.3B reranking, GraphRAG, and
-retrieval benchmarks/evaluation remain pending. No quality-improvement percentage is
-claimed by these deterministic regression tests.
+deletion, idempotency, concurrency, and recovery. GraphRAG and retrieval
+benchmarks/evaluation remain pending. No quality-improvement percentage is claimed by
+these deterministic regression tests.
+
+## Optional local cross-encoder reranking (Phase 1.3B)
+
+```text
+Query
+  |-- Qdrant cosine dense top-k
+  `-- BM25 sparse top-k
+              |
+              v
+       RRF fused_top_k
+              |
+              v
+   optional cross-encoder reranker
+              |
+              v
+         final_top_k evidence
+```
+
+RRF remains the recall stage: it combines independently ranked dense and sparse
+candidates using only stable IDs and rank positions. When enabled, a cross-encoder is the
+precision stage: it receives the complete fused candidate list, scores `(query, text)`
+pairs, and owns final ordering. Final evidence keeps the original immutable chunk and
+`HYBRID` strategy, receives sequential ranks, and uses `RERANKER` scores. RRF and reranker
+scores are never added.
+
+`RetrievalSettings.reranker_enabled` defaults to `false`, so the normal path slices RRF
+results to `final_top_k` without importing sentence-transformers, constructing a model, or
+downloading weights. Set `FINRAG_RETRIEVAL__RERANKER_ENABLED=true` to opt in and optionally
+set `FINRAG_RETRIEVAL__RERANKER_MODEL`; its default is `BAAI/bge-reranker-v2-m3`.
+`app/runtime.py` constructs the adapter and injects it into the application retriever. The
+graph receives only the composed retrieval contract and has no reranker settings or model
+imports. Construction and inference errors propagate; there is no silent RRF fallback.
+
+`BgeCrossEncoderReranker` uses the current `sentence_transformers.CrossEncoder` interface
+documented by the model publisher. `sentence-transformers` was already a runtime dependency
+for local embeddings, so Phase 1.3B adds no package or lockfile entry. The integration
+module imports that library dynamically only when the adapter is explicitly constructed.
+Normal tests inject deterministic fakes and block ML imports and network access. They do
+not validate real model quality, resource use, or latency. Qwen, Cohere, LLM rerankers,
+registries, routing, and retrieval benchmarks remain unimplemented.
+
+The following manual smoke only verifies that the real model can be constructed. It is
+not part of pytest/CI and may download model files and use substantial disk and memory:
+
+```powershell
+uv run python -c "from finrag.retrieval.bge import BgeCrossEncoderReranker; r = BgeCrossEncoderReranker(); print('loaded', r.model_name)"
+```
+
+See the [Phase 1.3B report](phase-1.3b-baseline.md) for the offline regression evidence and
+remaining limitations.
 
 ## Existing technical debt observed by source inspection
 

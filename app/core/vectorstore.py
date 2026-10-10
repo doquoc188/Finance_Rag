@@ -24,7 +24,7 @@ from finrag.domain import (
     ScoreType,
     SourceReference,
 )
-from finrag.retrieval import BM25Retriever, HybridRetriever
+from finrag.retrieval import BM25Retriever, HybridRetriever, Reranker
 
 
 class EmbeddingModel(Protocol):
@@ -86,11 +86,13 @@ class HybridFinancialRetriever:
         retrieval_settings: RetrievalSettings | None = None,
         embeddings: EmbeddingModel | None = None,
         qdrant_client: QdrantClient | None = None,
+        reranker: Reranker | None = None,
     ) -> None:
         self.settings = retrieval_settings or RetrievalSettings()
         self.documents: list[Document] = []
         self._embeddings = embeddings
         self._client = qdrant_client
+        self.reranker = reranker
         self._hybrid: HybridRetriever | None = None
         if documents:
             self.index_documents(documents)
@@ -148,6 +150,7 @@ class HybridFinancialRetriever:
             sparse_top_k=self.settings.sparse_top_k,
             fused_top_k=self.settings.fused_top_k,
             rrf_k=self.settings.rrf_k,
+            reranker=self.reranker,
         )
         self._embeddings = embeddings
         self._client = client

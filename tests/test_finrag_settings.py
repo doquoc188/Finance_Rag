@@ -36,6 +36,8 @@ def test_defaults_need_no_credentials_and_roles_are_separate() -> None:
     assert settings.retrieval.strategy is RetrievalStrategy.DENSE
     assert settings.retrieval.final_top_k == 4
     assert settings.retrieval.rrf_k == 60
+    assert settings.retrieval.reranker_enabled is False
+    assert settings.retrieval.reranker_model == "BAAI/bge-reranker-v2-m3"
     assert settings.retrieval.max_rewrite_attempts == 2
     assert settings.graphrag.enabled is False
     assert settings.graphrag.index_name is None
@@ -72,6 +74,8 @@ def test_nested_environment_loading(monkeypatch: pytest.MonkeyPatch) -> None:
         "FINRAG_RETRIEVAL__FINAL_TOP_K": "3",
         "FINRAG_RETRIEVAL__MAX_REWRITE_ATTEMPTS": "5",
         "FINRAG_RETRIEVAL__RRF_K": "50",
+        "FINRAG_RETRIEVAL__RERANKER_ENABLED": "true",
+        "FINRAG_RETRIEVAL__RERANKER_MODEL": "local/reranker",
         "FINRAG_RETRIEVAL__STRATEGY": "graph",
         "FINRAG_GRAPHRAG__ENABLED": "true",
         "FINRAG_GRAPHRAG__INDEX_NAME": "annual-reports",
@@ -93,6 +97,8 @@ def test_nested_environment_loading(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.retrieval.final_top_k == 3
     assert settings.retrieval.max_rewrite_attempts == 5
     assert settings.retrieval.rrf_k == 50
+    assert settings.retrieval.reranker_enabled is True
+    assert settings.retrieval.reranker_model == "local/reranker"
     assert settings.retrieval.strategy is RetrievalStrategy.GRAPH
     assert settings.graphrag == GraphRAGSettings(enabled=True, index_name="annual-reports")
 
@@ -139,6 +145,11 @@ def test_final_top_k_cannot_exceed_fused_top_k() -> None:
 def test_fused_top_k_cannot_exceed_combined_candidate_limits() -> None:
     with pytest.raises(ValidationError, match="combined candidate limits"):
         RetrievalSettings(dense_top_k=2, sparse_top_k=3, fused_top_k=6, final_top_k=4)
+
+
+def test_reranker_model_cannot_be_blank() -> None:
+    with pytest.raises(ValidationError, match="reranker_model"):
+        RetrievalSettings(reranker_model=" \n ")
 
 
 def test_invalid_environment_count_is_validated(monkeypatch: pytest.MonkeyPatch) -> None:

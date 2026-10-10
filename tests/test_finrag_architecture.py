@@ -256,6 +256,45 @@ print('stdlib-only domain import passed')
     assert result.stdout.strip() == "stdlib-only domain import passed"
 
 
+def test_retrieval_imports_do_not_load_ml_runtime_or_access_network(tmp_path: Path) -> None:
+    script = """
+import importlib
+import importlib.abc
+import socket
+import sys
+
+attempts = []
+class BlockML(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.')[0] in {'sentence_transformers', 'transformers', 'torch'}:
+            attempts.append(fullname)
+            raise AssertionError('ML runtime imported during generic retrieval import')
+
+def block_network(*args, **kwargs):
+    attempts.append('network')
+    raise AssertionError('Network attempted during retrieval import')
+
+sys.meta_path.insert(0, BlockML())
+socket.socket.connect = block_network
+socket.socket.connect_ex = block_network
+socket.create_connection = block_network
+import finrag
+import finrag.retrieval
+import finrag.retrieval.bge
+assert not attempts, attempts
+print('retrieval imports are lazy')
+"""
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", script],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    assert result.stdout.strip() == "retrieval imports are lazy"
+
+
 def test_installed_package_and_new_settings_have_no_deprecation_warnings(tmp_path: Path) -> None:
     # Isolated import checks editable packaging outside pytest's root pythonpath.
     environment = {

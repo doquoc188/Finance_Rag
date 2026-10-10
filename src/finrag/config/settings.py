@@ -38,6 +38,8 @@ class RetrievalSettings(_ConfigModel):
     fused_top_k: int = Field(default=20, gt=0)
     final_top_k: int = Field(default=4, gt=0)
     rrf_k: int = Field(default=60, gt=0)
+    reranker_enabled: bool = False
+    reranker_model: str = Field(default="BAAI/bge-reranker-v2-m3", min_length=1)
     max_rewrite_attempts: int = Field(default=2, ge=0)
 
     @field_validator(
