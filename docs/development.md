@@ -419,11 +419,8 @@ does not know BM25 or RRF details. The pre-ingestion demo evidence remains an ex
 compatibility path. Once indexed, empty branch results are valid and branch exceptions
 propagate rather than becoming empty results.
 
-Collection recreation still matches the legacy `force_recreate=True` lifecycle. Dense and
-BM25 are rebuilt from one in-memory corpus, but rebuilds are not transactional and stable
-upstream chunk IDs are absent. Phase 1.4 owns durable identity, incremental updates,
-deletion, idempotency, concurrency, and recovery. GraphRAG and retrieval
-benchmarks/evaluation remain pending. No quality-improvement percentage is claimed by
+That collection-recreation lifecycle was the Phase 1.3A baseline and is superseded by the
+Phase 1.4 incremental lifecycle below. No quality-improvement percentage is claimed by
 these deterministic regression tests.
 
 ## Optional local cross-encoder reranking (Phase 1.3B)
@@ -475,6 +472,70 @@ uv run python -c "from finrag.retrieval.bge import BgeCrossEncoderReranker; r = 
 
 See the [Phase 1.3B report](phase-1.3b-baseline.md) for the offline regression evidence and
 remaining limitations.
+
+## Stable IDs and incremental indexing (Phase 1.4)
+
+`finrag.indexing` owns deterministic identity, prepared-content fingerprints, strict
+manifest values, pure NEW/UNCHANGED/CHANGED planning, and atomic JSON replacement. It has
+no LangChain, Qdrant, embedding, provider, or application dependency. The application
+adapter in `app/core/vectorstore.py` converts LangChain documents to those contracts and
+executes the plan against Qdrant and the existing BM25 → RRF → optional reranker pipeline.
+
+Generated document IDs hash normalized logical `source`, `company`, and `period`/`year`.
+The parser supplies a basename rather than its temporary upload path. Missing/placeholder
+sources fail instead of sharing an `unknown` identity. Generated chunk IDs hash document
+identity, page, section, normalized text, and the occurrence among equal chunks in that
+document. Explicit valid IDs are retained. A SHA-256 content fingerprint covers the
+ordered prepared text, structure, and scalar metadata while excluding identity fields.
+
+Each successful batch merges into the committed corpus:
+
+```text
+prepare and plan
+      |
+embed NEW/CHANGED documents only
+      |
+upsert deterministic UUIDv5 points with reconstructable payloads
+      |
+delete stale points for CHANGED documents
+      |
+atomically replace the JSON manifest
+      |
+rebuild BM25 and dense adapters over the complete committed corpus
+```
+
+UNCHANGED documents perform zero embedding, upsert, and delete calls. Documents absent
+from a batch remain indexed; there is no implicit document-deletion policy. The manifest
+records format versions, collection name, effective embedding identity, vector size,
+cosine distance, per-document source/fingerprint, and ordered chunk IDs. Qdrant stores
+text, source, document/chunk IDs, page, section, and scalar metadata, allowing the complete
+sparse corpus to be reconstructed after restart. Manifest and payload IDs must agree
+exactly; an incomplete or partially committed store is never silently used for hybrid
+retrieval.
+
+Set the manifest path with:
+
+```powershell
+$env:FINRAG_INDEXING__MANIFEST_PATH = "data/index/manifest.json"
+```
+
+The default is `.finrag/index-manifest.json`, which is gitignored. Application composition
+uses it when legacy `QDRANT_LOCATION` is persistent. With the default `:memory:` Qdrant,
+the manifest also remains in memory because a disk manifest cannot safely describe an
+ephemeral collection.
+
+Collections or manifests with another embedding model/dimension, distance, identity
+version, payload schema, or collection name are rejected. The adapter never calls
+`delete_collection`. To migrate a legacy or incompatible index, stop all writers, archive
+or explicitly remove both the old collection and its manifest, then ingest the complete
+source corpus under the new configuration. There is no automated migration command yet.
+
+Embedding and upsert failures leave the manifest unchanged and do not delete stale points.
+The adapter blocks retrieval after a storage mutation reports failure and accepts a retry
+of the same source. Manifest replacement uses a sibling temporary file plus `os.replace`.
+This ordering is retryable but is not a transaction across Qdrant and the filesystem; a
+process crash after Qdrant mutation can require the explicit full rebuild above. Indexing
+currently assumes a single writer and does not implement concurrent-writer locking.
 
 ## Retrieval evaluation harness (Phase 1.3C)
 

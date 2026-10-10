@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from app.config import settings as legacy_settings
 from app.core.vectorstore import HybridFinancialRetriever
 from app.graph.workflow import FinragGraph, build_finrag_graph
 from finrag.config import Settings
@@ -57,6 +58,11 @@ def compose_runtime(
         active_retriever = HybridFinancialRetriever(
             retrieval_settings=configuration.retrieval,
             reranker=active_reranker,
+            manifest_path=(
+                configuration.indexing.manifest_path
+                if legacy_settings.QDRANT_LOCATION != ":memory:"
+                else None
+            ),
         )
     graph = build_finrag_graph(
         roles,

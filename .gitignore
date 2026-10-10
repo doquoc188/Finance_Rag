@@ -16,6 +16,7 @@ env/
 .coverage.*
 htmlcov/
 coverage.xml
+.finrag/
 build/
 dist/
 *.egg-info/

@@ -1,5 +1,6 @@
 """Validated configuration contracts consumed by application composition."""
 
+from pathlib import Path
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -67,6 +68,12 @@ class RetrievalSettings(_ConfigModel):
         return self
 
 
+class IndexingSettings(_ConfigModel):
+    """Local manifest location; storage clients remain application-owned."""
+
+    manifest_path: Path = Path(".finrag/index-manifest.json")
+
+
 class GraphRAGSettings(_ConfigModel):
     """Opt-in graph index identity only; no graph adapter is initialized."""
 
@@ -98,6 +105,7 @@ class Settings(BaseSettings):
     query_rewrite: ChatModelSettings = Field(default_factory=ChatModelSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     retrieval: RetrievalSettings = Field(default_factory=RetrievalSettings)
+    indexing: IndexingSettings = Field(default_factory=IndexingSettings)
     graphrag: GraphRAGSettings = Field(default_factory=GraphRAGSettings)
 
     @model_validator(mode="after")

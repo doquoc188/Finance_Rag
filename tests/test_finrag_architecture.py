@@ -13,6 +13,7 @@ import finrag
 import finrag.config
 import finrag.domain
 import finrag.evaluation
+import finrag.indexing
 import finrag.models
 import finrag.providers
 import finrag.retrieval
@@ -52,6 +53,11 @@ import finrag.verification
             "finrag.evaluation",
             Path(finrag.evaluation.__file__).parent,
             ("finrag.evaluation", "finrag.domain", "finrag.retrieval"),
+        ),
+        (
+            "finrag.indexing",
+            Path(finrag.indexing.__file__).parent,
+            ("finrag.indexing", "finrag.domain"),
         ),
     ],
 )

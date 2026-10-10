@@ -4,6 +4,7 @@ from .settings import (
     ChatModelSettings,
     EmbeddingSettings,
     GraphRAGSettings,
+    IndexingSettings,
     RetrievalSettings,
     Settings,
 )
@@ -12,6 +13,7 @@ __all__ = [
     "ChatModelSettings",
     "EmbeddingSettings",
     "GraphRAGSettings",
+    "IndexingSettings",
     "RetrievalSettings",
     "Settings",
 ]

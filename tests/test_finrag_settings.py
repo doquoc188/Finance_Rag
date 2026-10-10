@@ -11,6 +11,7 @@ from finrag.config import (
     ChatModelSettings,
     EmbeddingSettings,
     GraphRAGSettings,
+    IndexingSettings,
     RetrievalSettings,
     Settings,
 )
@@ -195,3 +196,11 @@ def test_legacy_environment_and_dotenv_are_not_loaded(
     (tmp_path / ".env").write_text("FINRAG_GENERATION__MODEL=dotenv-model\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     assert Settings().generation.model == "gpt-4o-mini"
+
+
+def test_index_manifest_path_has_local_default_and_nested_environment_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert IndexingSettings().manifest_path == Path(".finrag/index-manifest.json")
+    monkeypatch.setenv("FINRAG_INDEXING__MANIFEST_PATH", "state/custom-index.json")
+    assert Settings().indexing.manifest_path == Path("state/custom-index.json")

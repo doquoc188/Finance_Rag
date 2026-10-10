@@ -16,6 +16,9 @@
 - `src/finrag/evaluation/`: retrieval benchmark values, validation, metric math, runner,
   and deterministic reporting; may consume domain/retrieval contracts, never application,
   provider, model, API, LangGraph, or external-service code.
+- `src/finrag/indexing/`: deterministic identities, content fingerprints, immutable
+  manifests/plans/results, and atomic JSON persistence; standard library and domain only.
+  Qdrant, LangChain documents, embeddings, and application settings stay in `app/core/`.
 - `src/finrag/providers/`: explicit instance-owned chat factory registry; may import config
   contracts and LangChain Core, never legacy `app`. Import concrete integrations lazily
   inside their adapter factories; keep credentials out of general settings/domain.
@@ -80,11 +83,19 @@
   not contradictions. Legacy flags are limited numeric screening, not truth certificates.
 
 ## Indexing and idempotency
-- Future indexing changes must use stable document/chunk identities and versioned metadata.
-- Re-ingesting the same source must not duplicate chunks; updates/deletes must keep all
-  indexes consistent. Test repeat ingestion and recovery from partial failure.
-- Do not recreate persistent collections or change embedding spaces implicitly.
-  The current destructive indexing behavior is documented debt, not a safe precedent.
+- Preserve explicit document/chunk IDs. Generated IDs must use logical source identity and
+  document-local content/structure, never corpus position, random values, transient paths,
+  content-only document identity, or an `unknown` placeholder shared by many documents.
+- Treat the versioned JSON manifest as committed index state. Keep its signature aligned
+  with identity/payload format, collection, embedding model, vector size, and distance.
+- Re-ingesting unchanged content must perform no embedding, upsert, or deletion. Batch
+  ingestion merges absent documents; document removal requires a separately scoped policy.
+- Upsert current points before deleting stale points and replace the manifest last. This is
+  recoverable ordering, not a cross-system transaction; retry interrupted ingestion.
+- Never recreate or delete a collection implicitly. Reuse only compatible schemas and safe
+  reconstructable payloads; otherwise require an explicit migration/full rebuild.
+- Dense and BM25 must cover the same complete committed corpus, including after restart.
+  Persistent index mutation currently assumes one writer; concurrency control is deferred.
 
 ## Python and dependencies
 - Target Python 3.12; use `pyproject.toml` and `uv.lock` for the development environment.
