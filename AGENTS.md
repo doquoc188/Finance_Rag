@@ -7,6 +7,9 @@
 - For substantial refactors, follow `.agent/PLANS.md` and maintain an ExecPlan.
 
 ## Architecture boundaries
+- `src/finrag/config/`: validated settings only; no provider clients or runtime initialization.
+- `src/finrag/domain/`: immutable standard-library evidence/retrieval values; no framework,
+  provider, configuration, or legacy `app` imports. The legacy runtime is not migrated yet.
 - `app/api/`: HTTP validation, transport schemas, and service invocation.
 - `app/core/`: parsing, indexing/retrieval, and model access; no UI/HTTP dependencies.
 - `app/graph/`: LangGraph state and workflow orchestration, not a knowledge graph.
@@ -58,7 +61,7 @@
 
 ## Tests and evaluation
 - Run `uv sync`, `uv run ruff check .`, `uv run ruff format --check .`,
-  `uv run mypy app`, and `uv run pytest` from the root.
+  `uv run mypy app`, `uv run mypy src/finrag`, and `uv run pytest` from the root.
 - Default tests must be deterministic and offline: isolate secrets, network, model
   downloads, and persistent stores. External-service tests require explicit opt-in.
 - Add regression tests for changed behavior, including error paths; do not xfail,

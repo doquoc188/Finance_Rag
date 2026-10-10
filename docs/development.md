@@ -13,6 +13,10 @@ configuration or provider failures now raise explicit errors; successful provide
 selection and constructor arguments are preserved. See the
 [Phase 1.0.2 report](phase-1.0.2-baseline.md) for failure semantics and current results.
 
+Phase 1.1A adds `src/finrag` configuration and immutable domain contracts without
+migrating the application. See the [foundation report](phase-1.1a-baseline.md) for
+environment names, domain constraints, packaging changes, and verification.
+
 ## Python and installation
 
 Use Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
@@ -29,8 +33,9 @@ uv run pytest
 `.python-version` selects 3.12. `requires-python` deliberately limits this baseline to
 3.12; newer interpreters are not yet validated. `uv.lock` records the resolved runtime,
 optional, and development dependencies. Use `uv sync --locked` in automation. The
-application runs directly from the repository (`tool.uv.package = false`); this phase
-does not introduce a build backend, wheel, or `__init__.py` files.
+legacy application still runs directly from the repository. Since Phase 1.1A,
+setuptools packages only `src/finrag`, and `uv sync` installs it editably. The existing
+`app/` modules remain at their original paths and do not import the new package.
 
 `uv run uvicorn app.main:app --reload` and `uv run streamlit run ui/streamlit_app.py`
 retain the existing entry points. Running the application can use configured credentials
@@ -126,5 +131,6 @@ These are observations, not fixes or acceptance claims:
 See the [Phase 1.0 verification baseline](phase-1.0-baseline.md) for the original results,
 the [Phase 1.0.1 baseline](phase-1.0.1-baseline.md) for its green offline test suite,
 and the [Phase 1.0.2 baseline](phase-1.0.2-baseline.md) for the current failure semantics.
+The [Phase 1.1A baseline](phase-1.1a-baseline.md) covers the new configuration/domain code.
 Future agents should follow [AGENTS.md](../AGENTS.md) and the
 [ExecPlan contract](../.agent/PLANS.md).

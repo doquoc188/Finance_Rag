@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "finance-rag"
 version = "1.0.0"
@@ -50,9 +54,15 @@ dev = [
 ]
 
 [tool.uv]
-# This is a runnable application with namespace packages, not a distributable wheel.
-package = false
 default-groups = ["dev"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["finrag*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+finrag = ["py.typed"]
 
 [tool.pytest.ini_options]
 minversion = "8.2"
@@ -87,7 +97,8 @@ indent-style = "space"
 
 [tool.mypy]
 python_version = "3.12"
-files = ["app"]
+files = ["app", "src/finrag"]
+mypy_path = ["src"]
 namespace_packages = true
 explicit_package_bases = true
 check_untyped_defs = true
