@@ -1,21 +1,16 @@
 import os
 import shutil
-from typing import Optional, cast
+from typing import cast
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
 from app.api.schemas import ChatRequest, ChatResponse, CitationSchema, IngestResponse
 from app.config import settings
 from app.core.pdf_parser import FinancialPDFParser
-from app.core.vectorstore import HybridFinancialRetriever
-from app.graph.nodes import set_global_retriever
 from app.graph.state import FinGraphUpdate
 from app.runtime import GraphRuntime
 
 router = APIRouter(prefix="/api/v1", tags=["Financial RAG"])
-
-# Active global retriever instance
-retriever_instance: Optional[HybridFinancialRetriever] = None
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -52,12 +47,12 @@ async def chat_endpoint(request: ChatRequest, http_request: Request) -> ChatResp
 
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest_document(
+    http_request: Request,
     file: UploadFile = File(...),
     company_name: str = Form("FPT Corporation"),
     year: str = Form("2023"),
 ) -> IngestResponse:
     """Uploads a Financial Report PDF, parses tables & indexes into Qdrant & BM25."""
-    global retriever_instance
     try:
         temp_dir = os.path.join(os.getcwd(), "data", "uploads")
         os.makedirs(temp_dir, exist_ok=True)
@@ -71,12 +66,8 @@ async def ingest_document(
         parser = FinancialPDFParser()
         docs = parser.parse_pdf(file_path, company_name=company_name, year=year)
 
-        if not retriever_instance:
-            retriever_instance = HybridFinancialRetriever(documents=docs)
-        else:
-            retriever_instance.index_documents(docs)
-
-        set_global_retriever(retriever_instance)
+        runtime: GraphRuntime = http_request.app.state.runtime
+        runtime.retriever.index_documents(docs)
 
         return IngestResponse(
             status="success",

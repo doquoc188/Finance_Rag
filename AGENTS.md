@@ -9,8 +9,9 @@
 ## Architecture boundaries
 - `src/finrag/config/`: validated settings only; no provider clients or runtime initialization.
 - `src/finrag/domain/`: immutable standard-library evidence/retrieval values; no framework,
-  provider, configuration, or legacy `app` imports. Legacy retrieval has not adopted
-  these domain values yet.
+  provider, configuration, or legacy `app` imports.
+- `src/finrag/retrieval/`: typed synchronous retrieval contract, in-memory BM25, hybrid
+  composition, and pure RRF; no FastAPI, LangGraph, provider, or legacy `app` imports.
 - `src/finrag/providers/`: explicit instance-owned chat factory registry; may import config
   contracts and LangChain Core, never legacy `app`. Import concrete integrations lazily
   inside their adapter factories; keep credentials out of general settings/domain.
@@ -19,11 +20,14 @@
 - `src/finrag/verification/`: deterministic explicit-quantity checks with Decimal and
   standard-library values only; no frameworks, providers, legacy app, FX, or derived math.
 - `app/api/`: HTTP validation, transport schemas, and service invocation.
-- `app/core/`: parsing, indexing/retrieval, and model access; no UI/HTTP dependencies.
+- `app/core/`: parsing, indexing/application retrieval adapters, and model access; no
+  UI/HTTP dependencies. Qdrant/LangChain conversion stays at this boundary.
 - `app/graph/`: LangGraph orchestration using explicitly supplied ModelRoles;
-  nodes consume BaseChatModel, never settings, registries, or provider adapters.
+  nodes consume BaseChatModel and the Retriever contract, never settings, registries,
+  provider adapters, BM25, or RRF internals.
 - `app/runtime.py`: application composition; fresh registry, built-in registrations,
-  role resolution once, explicit graph construction. FastAPI lifespan owns the runtime.
+  role resolution once, instance-owned retrieval, explicit graph construction. FastAPI
+  lifespan owns the runtime.
 - `app/config.py`: configuration; `ui/`: API client; `simple_app.py`: standalone demo.
 - Keep existing module paths and public contracts until an explicit migration is scoped.
   These boundaries guide changes; existing violations are debt, not permission to refactor.
@@ -43,6 +47,9 @@
 - Apply company/period filters consistently to every retrieval branch when implemented.
 - Claim hybrid search only when both rankings are actually combined. Test ordering,
   deduplication, empty results, filtering, and fallback behavior on fixed fixtures.
+- Dense and BM25 must rank independently. Fuse stable chunk IDs with RRF rank positions;
+  never add raw cosine and BM25 scores. Label fused scores as RRF and keep deterministic
+  first-seen tie-breaking. Empty results are valid; branch exceptions remain explicit.
 - Distinguish internal evidence from web evidence; retrieved content is untrusted data.
 - Retrieval relevance failure may rewrite and retry only within the explicitly configured,
   per-execution budget. Relevant evidence must bypass rewriting; exhaustion must use the

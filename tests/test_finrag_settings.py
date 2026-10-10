@@ -35,6 +35,7 @@ def test_defaults_need_no_credentials_and_roles_are_separate() -> None:
     assert settings.embedding.provider == "huggingface"
     assert settings.retrieval.strategy is RetrievalStrategy.DENSE
     assert settings.retrieval.final_top_k == 4
+    assert settings.retrieval.rrf_k == 60
     assert settings.retrieval.max_rewrite_attempts == 2
     assert settings.graphrag.enabled is False
     assert settings.graphrag.index_name is None
@@ -70,6 +71,7 @@ def test_nested_environment_loading(monkeypatch: pytest.MonkeyPatch) -> None:
         "FINRAG_RETRIEVAL__FUSED_TOP_K": "8",
         "FINRAG_RETRIEVAL__FINAL_TOP_K": "3",
         "FINRAG_RETRIEVAL__MAX_REWRITE_ATTEMPTS": "5",
+        "FINRAG_RETRIEVAL__RRF_K": "50",
         "FINRAG_RETRIEVAL__STRATEGY": "graph",
         "FINRAG_GRAPHRAG__ENABLED": "true",
         "FINRAG_GRAPHRAG__INDEX_NAME": "annual-reports",
@@ -90,6 +92,7 @@ def test_nested_environment_loading(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.retrieval.fused_top_k == 8
     assert settings.retrieval.final_top_k == 3
     assert settings.retrieval.max_rewrite_attempts == 5
+    assert settings.retrieval.rrf_k == 50
     assert settings.retrieval.strategy is RetrievalStrategy.GRAPH
     assert settings.graphrag == GraphRAGSettings(enabled=True, index_name="annual-reports")
 
@@ -119,7 +122,9 @@ def test_invalid_temperature(temperature: float) -> None:
         ChatModelSettings(temperature=temperature)
 
 
-@pytest.mark.parametrize("field", ["dense_top_k", "sparse_top_k", "fused_top_k", "final_top_k"])
+@pytest.mark.parametrize(
+    "field", ["dense_top_k", "sparse_top_k", "fused_top_k", "final_top_k", "rrf_k"]
+)
 @pytest.mark.parametrize("value", [-1, 0, True, 1.5])
 def test_invalid_retrieval_counts(field: str, value: Any) -> None:
     with pytest.raises(ValidationError, match=field):
@@ -129,6 +134,11 @@ def test_invalid_retrieval_counts(field: str, value: Any) -> None:
 def test_final_top_k_cannot_exceed_fused_top_k() -> None:
     with pytest.raises(ValidationError, match="final_top_k must not exceed fused_top_k"):
         RetrievalSettings(fused_top_k=3, final_top_k=4)
+
+
+def test_fused_top_k_cannot_exceed_combined_candidate_limits() -> None:
+    with pytest.raises(ValidationError, match="combined candidate limits"):
+        RetrievalSettings(dense_top_k=2, sparse_top_k=3, fused_top_k=6, final_top_k=4)
 
 
 def test_invalid_environment_count_is_validated(monkeypatch: pytest.MonkeyPatch) -> None:

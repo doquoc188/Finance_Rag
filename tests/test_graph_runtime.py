@@ -9,7 +9,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app import runtime as composition
 from app.core import llm
-from app.graph import nodes
+from app.core.vectorstore import HybridFinancialRetriever
 from app.graph.nodes import GradeDocuments
 from app.graph.state import FinGraphUpdate
 from app.graph.workflow import FallbackStateGraph, build_finrag_graph
@@ -24,13 +24,12 @@ from finrag.providers.errors import (
     ProviderInitializationError,
     ProviderNotRegisteredError,
 )
+from finrag.retrieval import Retriever
 from tests.chat_models import WorkflowChatModel
 
 
 @pytest.fixture(autouse=True)
 def isolate_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(nodes, "global_retriever", None)
-
     def reject_legacy_model(*args: object, **kwargs: object) -> None:
         raise AssertionError("The graph must not construct a legacy chat model")
 
@@ -124,6 +123,7 @@ def test_composition_passes_original_configs_and_reuses_models_for_queries() -> 
     runtime = compose_runtime(configuration, registry=registry)
     assert isinstance(runtime.graph, CompiledStateGraph)
     assert runtime.settings is configuration
+    assert isinstance(runtime.retriever, HybridFinancialRetriever)
     configs = (configuration.generation, configuration.grading, configuration.query_rewrite)
     assert len(records) == 3
     assert all(record[0] is config for record, config in zip(records, configs, strict=True))
@@ -140,12 +140,23 @@ def test_composition_passes_original_configs_and_reuses_models_for_queries() -> 
 def test_composition_passes_validated_rewrite_budget_to_graph(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    captured: list[int] = []
+    captured: list[tuple[int, int, Retriever | None]] = []
     original_builder = composition.build_finrag_graph
 
-    def record_builder(roles: ModelRoles, *, max_rewrite_attempts: int = 2) -> CompiledStateGraph:
-        captured.append(max_rewrite_attempts)
-        graph = original_builder(roles, max_rewrite_attempts=max_rewrite_attempts)
+    def record_builder(
+        roles: ModelRoles,
+        *,
+        max_rewrite_attempts: int = 2,
+        retriever: Retriever | None = None,
+        retrieval_limit: int = 4,
+    ) -> CompiledStateGraph:
+        captured.append((max_rewrite_attempts, retrieval_limit, retriever))
+        graph = original_builder(
+            roles,
+            max_rewrite_attempts=max_rewrite_attempts,
+            retriever=retriever,
+            retrieval_limit=retrieval_limit,
+        )
         assert isinstance(graph, CompiledStateGraph)
         return graph
 
@@ -154,7 +165,7 @@ def test_composition_passes_validated_rewrite_budget_to_graph(
     runtime = compose_runtime(configuration, registry=make_test_registry([]))
 
     assert runtime.settings is configuration
-    assert captured == [0]
+    assert captured == [(0, configuration.retrieval.final_top_k, runtime.retriever)]
 
 
 def test_default_composition_owns_fresh_empty_registries(monkeypatch: pytest.MonkeyPatch) -> None:

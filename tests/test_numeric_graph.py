@@ -6,24 +6,13 @@ import pytest
 from langchain_core.documents import Document
 from langgraph.graph.state import CompiledStateGraph
 
-from app.core.vectorstore import HybridFinancialRetriever
-from app.graph import nodes
 from app.graph.nodes import grade_generation_node
 from app.graph.workflow import build_finrag_graph
 from finrag.models import ModelRoles
 from finrag.verification import VerificationStatus
 from tests.chat_models import WorkflowChatModel
+from tests.retrievers import StaticRetriever
 from tests.test_grounded_inputs import node_state
-
-
-class FixtureRetriever(HybridFinancialRetriever):
-    """Inject supplied documents without initializing embeddings or persistent stores."""
-
-    def __init__(self, documents: list[Document]) -> None:
-        self.documents = documents
-
-    def get_relevant_documents(self, query: str, top_k: int = 4) -> list[Document]:
-        return self.documents[:top_k]
 
 
 @pytest.mark.parametrize(
@@ -35,7 +24,6 @@ class FixtureRetriever(HybridFinancialRetriever):
     ],
 )
 def test_real_compiled_graph_propagates_numeric_report_and_conservative_flags(
-    monkeypatch: pytest.MonkeyPatch,
     answer: str,
     status: VerificationStatus,
     hallucinated: str,
@@ -45,11 +33,12 @@ def test_real_compiled_graph_propagates_numeric_report_and_conservative_flags(
         page_content="Revenue reached VND 50 billion.",
         metadata={"source": "local-report.txt", "page": 2, "company": "Test", "year": "2025"},
     )
-    monkeypatch.setattr(nodes, "global_retriever", FixtureRetriever([document]))
     generation = WorkflowChatModel(role="generation", responses=[answer])
     grading = WorkflowChatModel(role="grading", responses=["unused"])
     rewrite = WorkflowChatModel(role="query_rewrite", responses=["must not be called"])
-    graph = build_finrag_graph(ModelRoles(generation, grading, rewrite))
+    graph = build_finrag_graph(
+        ModelRoles(generation, grading, rewrite), retriever=StaticRetriever([document])
+    )
     assert isinstance(graph, CompiledStateGraph)
     result = graph.invoke(
         {
@@ -66,7 +55,10 @@ def test_real_compiled_graph_propagates_numeric_report_and_conservative_flags(
     assert isinstance(verification.mention.value, Decimal)
     if status is not VerificationStatus.NOT_FOUND:
         assert verification.evidence[0].sentence == document.page_content
-        assert result["documents"][verification.evidence[0].evidence_index] == document
+        assert (
+            result["documents"][verification.evidence[0].evidence_index].page_content
+            == document.page_content
+        )
     assert result["is_hallucinated"] == hallucinated
     assert result["is_useful"] == useful
     assert result["retry_count"] == 0

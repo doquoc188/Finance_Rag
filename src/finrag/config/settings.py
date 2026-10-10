@@ -37,9 +37,12 @@ class RetrievalSettings(_ConfigModel):
     sparse_top_k: int = Field(default=20, gt=0)
     fused_top_k: int = Field(default=20, gt=0)
     final_top_k: int = Field(default=4, gt=0)
+    rrf_k: int = Field(default=60, gt=0)
     max_rewrite_attempts: int = Field(default=2, ge=0)
 
-    @field_validator("dense_top_k", "sparse_top_k", "fused_top_k", "final_top_k", mode="before")
+    @field_validator(
+        "dense_top_k", "sparse_top_k", "fused_top_k", "final_top_k", "rrf_k", mode="before"
+    )
     @classmethod
     def reject_boolean_counts(cls, value: object) -> object:
         if isinstance(value, bool):
@@ -57,6 +60,8 @@ class RetrievalSettings(_ConfigModel):
     def validate_result_count(self) -> Self:
         if self.final_top_k > self.fused_top_k:
             raise ValueError("final_top_k must not exceed fused_top_k")
+        if self.fused_top_k > self.dense_top_k + self.sparse_top_k:
+            raise ValueError("fused_top_k must not exceed the combined candidate limits")
         return self
 
 

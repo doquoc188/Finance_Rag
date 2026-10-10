@@ -10,13 +10,8 @@ from tests.chat_models import WorkflowChatModel
 
 
 @pytest.fixture
-def workflow_chat_model(monkeypatch: pytest.MonkeyPatch) -> WorkflowChatModel:
-    from app.graph import nodes
-
+def workflow_chat_model() -> WorkflowChatModel:
     model = WorkflowChatModel(responses=["Offline workflow test response."])
-
-    # Models are supplied explicitly to the builder; only retrieval state is reset.
-    monkeypatch.setattr(nodes, "global_retriever", None)
     return model
 
 

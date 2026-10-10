@@ -14,6 +14,7 @@ import finrag.config
 import finrag.domain
 import finrag.models
 import finrag.providers
+import finrag.retrieval
 import finrag.verification
 
 
@@ -40,6 +41,11 @@ import finrag.verification
             "finrag.models",
             Path(finrag.models.__file__).parent,
             ("finrag.models", "finrag.config", "finrag.providers.registry", "langchain_core"),
+        ),
+        (
+            "finrag.retrieval",
+            Path(finrag.retrieval.__file__).parent,
+            ("finrag.retrieval", "finrag.domain", "rank_bm25"),
         ),
     ],
 )
@@ -91,8 +97,9 @@ def test_graph_imports_resolved_models_without_provider_or_settings_dependencies
         "app.graph",
         "app.core.errors",
         "app.core.pdf_parser",
-        "app.core.vectorstore",  # Existing embeddings/retrieval path is not migrated.
+        "app.core.vectorstore",  # LangChain document conversion stays at the app boundary.
         "finrag.models",
+        "finrag.retrieval",
         "finrag.verification",
         "langchain_core",
         "langgraph",

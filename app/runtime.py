@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from app.core.vectorstore import HybridFinancialRetriever
 from app.graph.workflow import FinragGraph, build_finrag_graph
 from finrag.config import Settings
 from finrag.models import ModelRoles, resolve_model_roles
@@ -14,10 +15,14 @@ class GraphRuntime:
     settings: Settings
     model_roles: ModelRoles
     graph: FinragGraph
+    retriever: HybridFinancialRetriever
 
 
 def compose_runtime(
-    settings: Settings | None = None, *, registry: ChatProviderRegistry | None = None
+    settings: Settings | None = None,
+    *,
+    registry: ChatProviderRegistry | None = None,
+    retriever: HybridFinancialRetriever | None = None,
 ) -> GraphRuntime:
     """Resolve once; explicit caller registries own all their registrations.
 
@@ -29,7 +34,15 @@ def compose_runtime(
         registry = ChatProviderRegistry()
         register_builtin_chat_providers(registry)
     roles = resolve_model_roles(configuration, registry)
-    graph = build_finrag_graph(
-        roles, max_rewrite_attempts=configuration.retrieval.max_rewrite_attempts
+    active_retriever = (
+        retriever
+        if retriever is not None
+        else HybridFinancialRetriever(retrieval_settings=configuration.retrieval)
     )
-    return GraphRuntime(configuration, roles, graph)
+    graph = build_finrag_graph(
+        roles,
+        max_rewrite_attempts=configuration.retrieval.max_rewrite_attempts,
+        retriever=active_retriever,
+        retrieval_limit=configuration.retrieval.final_top_k,
+    )
+    return GraphRuntime(configuration, roles, graph, active_retriever)

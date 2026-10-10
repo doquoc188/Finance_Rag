@@ -9,11 +9,12 @@ from app.graph.nodes import (
     GraphNode,
     create_generate_node,
     create_grade_documents_node,
+    create_retrieve_node,
     create_transform_query_node,
     grade_generation_node,
-    retrieve_node,
 )
 from app.graph.state import FinGraphState, FinGraphUpdate
+from finrag.retrieval import Retriever
 
 
 class FallbackStateGraph:
@@ -21,11 +22,13 @@ class FallbackStateGraph:
 
     def __init__(
         self,
+        retrieve: GraphNode,
         grade: GraphNode,
         generate: GraphNode,
         rewrite: GraphNode,
         max_rewrite_attempts: int,
     ) -> None:
+        self._retrieve = retrieve
         self._grade = grade
         self._generate = generate
         self._rewrite = rewrite
@@ -39,7 +42,7 @@ class FallbackStateGraph:
         state["retry_count"] = rewrite_attempts
 
         while True:
-            state.update(retrieve_node(state))
+            state.update(self._retrieve(state))
             state.update(self._grade(state))
             if state["is_relevant"] == "yes":
                 break
@@ -58,7 +61,13 @@ type FinragGraph = (
 )
 
 
-def build_finrag_graph(model_roles: ModelRoles, *, max_rewrite_attempts: int = 2) -> FinragGraph:
+def build_finrag_graph(
+    model_roles: ModelRoles,
+    *,
+    max_rewrite_attempts: int = 2,
+    retriever: Retriever | None = None,
+    retrieval_limit: int = 4,
+) -> FinragGraph:
     """Builds and compiles the Self-Corrective Financial RAG StateGraph."""
     if (
         isinstance(max_rewrite_attempts, bool)
@@ -66,6 +75,13 @@ def build_finrag_graph(model_roles: ModelRoles, *, max_rewrite_attempts: int = 2
         or max_rewrite_attempts < 0
     ):
         raise ValueError("max_rewrite_attempts must be a non-negative integer")
+    if (
+        isinstance(retrieval_limit, bool)
+        or not isinstance(retrieval_limit, int)
+        or retrieval_limit < 1
+    ):
+        raise ValueError("retrieval_limit must be a positive integer")
+    retrieve = create_retrieve_node(retriever, retrieval_limit)
     grade = create_grade_documents_node(model_roles.grading)
     generate = create_generate_node(model_roles.generation)
     rewrite = create_transform_query_node(model_roles.query_rewrite)
@@ -74,7 +90,7 @@ def build_finrag_graph(model_roles: ModelRoles, *, max_rewrite_attempts: int = 2
 
         workflow = StateGraph[FinGraphState, None, FinGraphUpdate, FinGraphState](FinGraphState)
 
-        workflow.add_node("retrieve", retrieve_node)
+        workflow.add_node("retrieve", retrieve)
         workflow.add_node("grade_documents", grade, input_schema=FinGraphState)
         workflow.add_node("generate", generate, input_schema=FinGraphState)
         workflow.add_node("transform_query", rewrite, input_schema=FinGraphState)
@@ -108,4 +124,4 @@ def build_finrag_graph(model_roles: ModelRoles, *, max_rewrite_attempts: int = 2
         return app
     except Exception as e:
         print(f"[Notice] Using Fallback StateGraph Engine ({type(e).__name__}).")
-        return FallbackStateGraph(grade, generate, rewrite, max_rewrite_attempts)
+        return FallbackStateGraph(retrieve, grade, generate, rewrite, max_rewrite_attempts)

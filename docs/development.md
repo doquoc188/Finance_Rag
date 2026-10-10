@@ -136,8 +136,7 @@ and health disclosure debt is not redesigned here.
 
 Implemented: runtime model-role injection, explicit instance ownership, and offline
 compiled graph/composition/startup tests, plus the input corrections described below.
-Still pending: derived financial calculations, true hybrid retrieval, GraphRAG, and
-evaluation expansion. See the
+Still pending: derived financial calculations, GraphRAG, and evaluation expansion. See the
 [Phase 1.1F report](phase-1.1f-baseline.md) for measured checks and deferred defects.
 
 ## Grounded model inputs (Phase 1.2A)
@@ -385,15 +384,55 @@ only staged Python files; full commands above check the repository. They report
 violations without editing files. Existing debt also makes all-file hooks fail.
 There is no invented coverage target or claimed evaluation score.
 
+## True hybrid retrieval (Phase 1.3A)
+
+```text
+Query
+  |-- Qdrant cosine dense ranking
+  `-- BM25 sparse ranking
+             |
+             v
+      Reciprocal Rank Fusion
+             |
+             v
+        fused evidence
+```
+
+`HybridFinancialRetriever` prepares one ordered `DocumentChunk` corpus for both branches.
+The Qdrant adapter creates the existing named collection with explicit cosine distance and
+returns `DENSE`/`COSINE` evidence. BM25 independently ranks the same chunks and returns
+`SPARSE`/`BM25` evidence. `HybridRetriever` then applies
+`sum(1 / (rrf_k + rank))`, using 1-based rank and default `rrf_k=60`. Raw cosine and BM25
+scores never enter the fusion formula. Fused evidence is labelled `HYBRID`/`RRF`.
+
+Fusion keys on `chunk_id`, so one chunk found by both branches receives both contributions;
+equal text with different IDs remains separate. Ties preserve first appearance across the
+dense-then-sparse input order. Explicit upstream IDs are retained. When legacy documents
+lack IDs, the application adapter derives deterministic SHA-256 identities from source
+metadata and ordered corpus position. Those generated IDs remain stable only while the
+logical corpus order is stable.
+
+`compose_runtime` owns the retriever and injects it plus `final_top_k` into the graph.
+Ingestion updates that runtime-owned instance; there is no graph/API module singleton.
+The graph converts typed evidence back to its established LangChain `Document` state and
+does not know BM25 or RRF details. The pre-ingestion demo evidence remains an explicit
+compatibility path. Once indexed, empty branch results are valid and branch exceptions
+propagate rather than becoming empty results.
+
+Collection recreation still matches the legacy `force_recreate=True` lifecycle. Dense and
+BM25 are rebuilt from one in-memory corpus, but rebuilds are not transactional and stable
+upstream chunk IDs are absent. Phase 1.4 owns durable identity, incremental updates,
+deletion, idempotency, concurrency, and recovery. Phase 1.3B reranking, GraphRAG, and
+retrieval benchmarks/evaluation remain pending. No quality-improvement percentage is
+claimed by these deterministic regression tests.
+
 ## Existing technical debt observed by source inspection
 
 These are observations, not fixes or acceptance claims:
 
-- `app/core/vectorstore.py` returns vector results when available, otherwise token
-  overlap. A BM25 object is constructed but never queried; no rank fusion is applied.
 - `app/api/routes.py` accepts company/year but does not pass them into chat retrieval.
-  Indexing replaces the current documents and sets `force_recreate=True`; stable IDs,
-  incremental updates, concurrency isolation, and idempotent ingestion are absent.
+  Indexing still replaces the collection on ingestion; durable upstream IDs, incremental
+  updates, transactional recovery, concurrency isolation, and idempotent ingestion are absent.
 - Phase 1.2A supplies context to generation and question + document to grading.
   Phase 1.2B verifies explicit quantities deterministically with conservative lexical
   context and tri-state results. Derived arithmetic, locale ambiguity, inferred table
@@ -407,8 +446,8 @@ These are observations, not fixes or acceptance claims:
 - Upload paths use a client-supplied filename; error/health responses can expose internal
   details, CORS is permissive, and shared retriever state has no tenant isolation.
   These findings require a separate security/ingestion task before external deployment.
-- README/UI contain unsupported production, numeric-accuracy, hybrid-search, streaming,
-  reranker, and benchmark claims. No supporting evaluation artifacts were found.
+- README/UI contain unsupported production, numeric-accuracy, streaming, reranker, and
+  benchmark claims. No supporting evaluation artifacts were found.
   The historical claims must not be cited as validated results.
 
 See the [Phase 1.0 verification baseline](phase-1.0-baseline.md) for the original results,

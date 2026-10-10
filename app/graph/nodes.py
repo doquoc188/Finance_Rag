@@ -19,9 +19,10 @@ except ImportError as exc:
         "Package 'langchain-core' with ChatPromptTemplate is required. Run uv sync."
     ) from exc
 
-from app.core.vectorstore import HybridFinancialRetriever
+from app.core.vectorstore import evidence_to_document
 from app.graph.context import serialize_evidence
 from app.graph.state import FinGraphState, FinGraphUpdate
+from finrag.retrieval import Retriever
 
 
 class GraphNode(Protocol):
@@ -37,20 +38,14 @@ class GradeHallucination(BaseModel):
     is_useful: str = Field(description="Answer answers the user question, 'yes' or 'no'")
 
 
-global_retriever: HybridFinancialRetriever | None = None
-
-
-def set_global_retriever(retriever: HybridFinancialRetriever) -> None:
-    global global_retriever
-    global_retriever = retriever
-
-
-def retrieve_node(state: FinGraphState) -> FinGraphUpdate:
+def retrieve_node(
+    state: FinGraphState, *, retriever: Retriever | None, limit: int
+) -> FinGraphUpdate:
     print("--- [Graph Node] RETRIEVE DOCUMENTS ---")
     question = state.get("transformed_question") or state["question"]
 
-    if global_retriever and global_retriever.documents:
-        docs = global_retriever.get_relevant_documents(question, top_k=4)
+    if retriever is not None:
+        docs = [evidence_to_document(item) for item in retriever.retrieve(question, limit=limit)]
     else:
         docs = [
             Document(
@@ -237,6 +232,10 @@ def grade_generation_node(state: FinGraphState) -> FinGraphUpdate:
 
 def create_grade_documents_node(model: BaseChatModel) -> GraphNode:
     return partial(grade_documents_node, model=model)
+
+
+def create_retrieve_node(retriever: Retriever | None, limit: int) -> GraphNode:
+    return partial(retrieve_node, retriever=retriever, limit=limit)
 
 
 def create_generate_node(model: BaseChatModel) -> GraphNode:
