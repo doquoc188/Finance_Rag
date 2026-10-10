@@ -7,15 +7,30 @@ import sys
 from importlib.util import resolve_name
 from pathlib import Path
 
+import pytest
+
 import finrag
 import finrag.domain
+import finrag.providers
 
 
-def test_domain_imports_only_standard_library_or_domain_modules() -> None:
-    domain_dir = Path(finrag.domain.__file__).parent
-    for path in domain_dir.rglob("*.py"):
-        relative_parent = path.parent.relative_to(domain_dir)
-        package = ".".join(("finrag", "domain", *relative_parent.parts))
+@pytest.mark.parametrize(
+    ("package_name", "package_dir", "allowed_packages"),
+    [
+        ("finrag.domain", Path(finrag.domain.__file__).parent, ("finrag.domain",)),
+        (
+            "finrag.providers",
+            Path(finrag.providers.__file__).parent,
+            ("finrag.providers", "finrag.config", "langchain_core"),
+        ),
+    ],
+)
+def test_package_import_boundaries(
+    package_name: str, package_dir: Path, allowed_packages: tuple[str, ...]
+) -> None:
+    for path in package_dir.rglob("*.py"):
+        relative_parent = path.parent.relative_to(package_dir)
+        package = ".".join((package_name, *relative_parent.parts))
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             modules: list[str] = []
             if isinstance(node, ast.Import):
@@ -25,10 +40,12 @@ def test_domain_imports_only_standard_library_or_domain_modules() -> None:
                 modules = [resolve_name(module, package) if node.level else module]
             for module in modules:
                 assert (
-                    module == "finrag.domain"
-                    or module.startswith("finrag.domain.")
+                    any(
+                        module == allowed or module.startswith(allowed + ".")
+                        for allowed in allowed_packages
+                    )
                     or module.split(".")[0] in sys.stdlib_module_names
-                ), f"Domain dependency boundary violated: {path.name} imports {module}"
+                ), f"{package_name} dependency boundary violated: {path.name} imports {module}"
 
 
 def test_domain_imports_and_constructs_values_without_site_packages(tmp_path: Path) -> None:

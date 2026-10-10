@@ -17,6 +17,13 @@ Phase 1.1A adds `src/finrag` configuration and immutable domain contracts withou
 migrating the application. See the [foundation report](phase-1.1a-baseline.md) for
 environment names, domain constraints, packaging changes, and verification.
 
+Phase 1.1B adds explicit chat-provider factory registration. Factories return LangChain
+Core `BaseChatModel` to preserve Runnable composition, message output, and the standard
+structured-output interface. Registries belong to individual callers, with no global
+state or automatic provider discovery. Concrete adapters are deferred to Phase 1.1C+;
+the legacy runtime still uses its existing model construction. See the
+[provider contract report](phase-1.1b-baseline.md) for semantics and verification.
+
 ## Python and installation
 
 Use Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
