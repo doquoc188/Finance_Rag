@@ -53,6 +53,23 @@ Remote availability is only established when the caller uses the model. No runti
 migration or model-role resolver is included. See the
 [five-provider report](phase-1.1d-baseline.md) for exact interfaces and verification.
 
+Phase 1.1E adds explicit model-role composition:
+`Settings -> resolve_model_roles -> ChatProviderRegistry -> factory -> BaseChatModel`.
+Call `register_builtin_chat_providers` from `finrag.providers.builtin` on a registry
+you own, then pass validated settings and that registry to
+`finrag.models.resolve_model_roles`. Registration constructs no models or SDK clients.
+The helper fails on duplicates and never overwrites; sequential registrations before
+a later conflict remain, so it is neither idempotent nor transactional.
+
+`ModelRoles` has frozen `generation`, `grading`, and `query_rewrite` bindings matching
+the existing settings names. Each role may choose its own provider/model/temperature.
+Resolution uses that order and returns only after all succeed; original provider errors
+propagate without fallback. The resolver reads no environment and caches nothing;
+credentials stay inside adapters. Underlying LangChain models remain stateful, and
+caller-owned factories control instance sharing/lifetime. The legacy application still
+uses its existing construction path. See the
+[role-composition report](phase-1.1e-baseline.md) for behavior and verification.
+
 ## Python and installation
 
 Use Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).

@@ -12,6 +12,7 @@ import pytest
 import finrag
 import finrag.config
 import finrag.domain
+import finrag.models
 import finrag.providers
 
 
@@ -28,6 +29,11 @@ import finrag.providers
             "finrag.providers",
             Path(finrag.providers.__file__).parent,
             ("finrag.providers", "finrag.config", "langchain_core"),
+        ),
+        (
+            "finrag.models",
+            Path(finrag.models.__file__).parent,
+            ("finrag.models", "finrag.config", "finrag.providers.registry", "langchain_core"),
         ),
     ],
 )
@@ -106,6 +112,7 @@ modules = [importlib.import_module(name) for name in (
     'finrag', 'finrag.providers', 'finrag.providers.registry',
     'finrag.providers.openai', 'finrag.providers.groq',
     'finrag.providers.anthropic', 'finrag.providers.google', 'finrag.providers.ollama',
+    'finrag.providers.builtin', 'finrag.models',
 )]
 from finrag.providers import ChatProviderRegistry, ProviderNotRegisteredError
 for module in modules:
@@ -117,6 +124,12 @@ for name in ('openai', 'groq', 'anthropic', 'google', 'ollama'):
         pass
     else:
         raise AssertionError('Provider was automatically registered')
+assert not attempts, attempts
+from finrag.providers.builtin import register_builtin_chat_providers
+registry = ChatProviderRegistry()
+register_builtin_chat_providers(registry)
+for name in ('openai', 'groq', 'anthropic', 'google', 'ollama'):
+    assert callable(registry.get(name))
 assert not attempts, attempts
 print('provider imports are isolated')
 """
